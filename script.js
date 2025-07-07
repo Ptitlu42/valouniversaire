@@ -118,10 +118,12 @@ function updateSpeedDisplays() {
         (gameState.workers.mathieu * workerEfficiency.mathieu * (1000 / workerSpeed.mathieu)) +
         (gameState.workers.vico * workerEfficiency.vico * (1000 / workerSpeed.vico));
     
+    const actualWoodPerSecond = totalWorkerWoodPerSecond * 2.5;
+    
     const woodPerSecondElement = document.getElementById('woodPerSecond');
     const clicksPerSecondElement = document.getElementById('clicksPerSecond');
     
-    if (woodPerSecondElement) woodPerSecondElement.textContent = totalWorkerWoodPerSecond.toFixed(1);
+    if (woodPerSecondElement) woodPerSecondElement.textContent = actualWoodPerSecond.toFixed(1);
     if (clicksPerSecondElement) clicksPerSecondElement.textContent = clicksPerSecond.toFixed(1);
 }
 
@@ -131,6 +133,54 @@ function showAperitifAnimation() {
     animation.textContent = 'APEROOOO!';
     
     document.body.appendChild(animation);
+    
+    for (let i = 0; i < 6; i++) {
+        setTimeout(() => {
+            const glougou = document.createElement('div');
+            glougou.className = 'glougou';
+            glougou.textContent = 'glou';
+            
+            const angle = (i * 60) + Math.random() * 30;
+            const distance = 200 + Math.random() * 100;
+            const x = Math.cos(angle * Math.PI / 180) * distance;
+            const y = Math.sin(angle * Math.PI / 180) * distance;
+            
+            glougou.style.left = `calc(50% + ${x}px)`;
+            glougou.style.top = `calc(50% + ${y}px)`;
+            
+            document.body.appendChild(glougou);
+            
+            setTimeout(() => {
+                if (glougou.parentNode) {
+                    glougou.parentNode.removeChild(glougou);
+                }
+            }, 2000);
+        }, i * 100);
+    }
+    
+    for (let i = 0; i < 8; i++) {
+        setTimeout(() => {
+            const beerEmoji = document.createElement('div');
+            beerEmoji.className = 'beer-emoji';
+            beerEmoji.textContent = '🍺';
+            
+            const angle = (i * 45) + Math.random() * 20;
+            const distance = 150 + Math.random() * 80;
+            const x = Math.cos(angle * Math.PI / 180) * distance;
+            const y = Math.sin(angle * Math.PI / 180) * distance;
+            
+            beerEmoji.style.left = `calc(50% + ${x}px)`;
+            beerEmoji.style.top = `calc(50% + ${y}px)`;
+            
+            document.body.appendChild(beerEmoji);
+            
+            setTimeout(() => {
+                if (beerEmoji.parentNode) {
+                    beerEmoji.parentNode.removeChild(beerEmoji);
+                }
+            }, 2500);
+        }, i * 80);
+    }
     
     setTimeout(() => {
         if (animation.parentNode) {
@@ -147,11 +197,22 @@ function chopTree() {
     gameState.stats.recentClicks.push(Date.now());
     
     const mainTree = document.getElementById('mainTree');
+    const mainGame = document.querySelector('.main-game');
+    
     if (mainTree) {
         mainTree.classList.add('chopping');
+        mainTree.classList.add('chopping-cursor');
         setTimeout(() => {
             mainTree.classList.remove('chopping');
+            mainTree.classList.remove('chopping-cursor');
         }, 250);
+    }
+    
+    if (mainGame) {
+        mainGame.classList.add('chopping-cursor');
+        setTimeout(() => {
+            mainGame.classList.remove('chopping-cursor');
+        }, 150);
     }
     
     createFallingParticles();
@@ -362,6 +423,7 @@ function showFloatingText(text, color) {
 function workerChop(workerType) {
     const damage = workerEfficiency[workerType] * gameState.workers[workerType];
     gameState.treeHP -= damage;
+    gameState.stats.totalWoodGained += Math.floor(damage * 0.3);
     
     if (Math.random() < 0.3) {
         createFallingParticles();
