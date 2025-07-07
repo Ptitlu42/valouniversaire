@@ -7,9 +7,21 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="game-container">
+    <div id="welcomeModal" class="modal-overlay">
+        <div class="modal">
+            <h1>🎉 Bienvenue au Valouniversaire ! 🎉</h1>
+            <p>Prêt à transformer Valou en machine à boire de la bière ? 🍺<br>
+            Ton objectif : lui faire boire 420 bières pour atteindre le nirvana ultime !<br><br>
+            Mais d'abord, dis-nous qui tu es, brave bûcheron !</p>
+            <input type="text" id="playerName" placeholder="Ton pseudo de légende..." maxlength="20">
+            <button onclick="startGame()">COMMENCER L'AVENTURE !</button>
+        </div>
+    </div>
+
+    <div class="game-container" style="display: none;">
         <header class="header">
             <h1>🎂 Valouniversaire Game 🎂</h1>
+            <div class="player-name">Joueur : <span id="displayPlayerName"></span></div>
             <div class="valou-happiness">
                 <span class="valou-face">😊</span>
                 <div class="happiness-bar">
@@ -92,7 +104,9 @@
                     </div>
                 </div>
             </div>
+        </div>
 
+        <div class="statistics-section">
             <div class="statistics">
                 <h3>📊 Statistiques</h3>
                 <div class="stat-item">
@@ -114,6 +128,10 @@
                 <div class="stat-item">
                     <span>👷 Embauches:</span>
                     <span id="workersHired">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>⏱️ Temps de jeu:</span>
+                    <span id="gameTime">00:00</span>
                 </div>
             </div>
         </div>

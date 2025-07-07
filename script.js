@@ -1,6 +1,6 @@
 console.log('Script loading...');
 
-const gameState = {
+let gameState = {
     wood: 0,
     beer: 0,
     currentTool: 'manual',
@@ -21,7 +21,9 @@ const gameState = {
         totalBeersConsumed: 0,
         totalClicks: 0,
         workersHired: 0
-    }
+    },
+    playerName: '',
+    gameStartTime: null
 };
 
 const basePrices = {
@@ -183,6 +185,12 @@ function purchaseBeer() {
         gameState.stats.totalBeersConsumed++;
         updateUI();
         showFloatingText('🍺 Bière achetée !', '#ffd93d');
+        
+        if (gameState.beer >= 420) {
+            setTimeout(() => {
+                showEndScreen();
+            }, 1000);
+        }
     }
 }
 
@@ -422,4 +430,100 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
     initGame();
 }
 
-console.log('Script loaded successfully'); 
+console.log('Script loaded successfully');
+
+function startGame() {
+    const playerNameInput = document.getElementById('playerName');
+    const playerName = playerNameInput.value.trim();
+    
+    if (!playerName) {
+        alert('Tu dois entrer ton nom, brave bûcheron !');
+        return;
+    }
+    
+    if (playerName.length < 2) {
+        alert('Ton nom doit faire au moins 2 caractères !');
+        return;
+    }
+    
+    gameState.playerName = playerName;
+    gameState.gameStartTime = Date.now();
+    
+    document.getElementById('displayPlayerName').textContent = playerName;
+    document.getElementById('welcomeModal').style.display = 'none';
+    document.querySelector('.game-container').style.display = 'flex';
+    
+    startGameTimer();
+    console.log('Game started for player:', playerName);
+}
+
+function startGameTimer() {
+    setInterval(() => {
+        if (gameState.gameStartTime) {
+            const elapsed = Date.now() - gameState.gameStartTime;
+            const minutes = Math.floor(elapsed / 60000);
+            const seconds = Math.floor((elapsed % 60000) / 1000);
+            document.getElementById('gameTime').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+    }, 1000);
+}
+
+function showEndScreen() {
+    const elapsed = Date.now() - gameState.gameStartTime;
+    const minutes = Math.floor(elapsed / 60000);
+    const seconds = Math.floor((elapsed % 60000) / 1000);
+    const timeText = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    
+    document.querySelector('.game-container').style.display = 'none';
+    
+    const endModal = document.createElement('div');
+    endModal.className = 'modal-overlay';
+    endModal.innerHTML = `
+        <div class="modal end-screen">
+            <h1>C'est la valoute !</h1>
+            <p>🎉 Félicitations ${gameState.playerName} ! 🎉<br>
+            Tu as réussi à faire boire 420 bières à Valou !<br><br>
+            🎯 Mission accomplie en ${timeText} ! 🎯</p>
+            <div class="time">⏱️ Temps de jeu : ${timeText}</div>
+            <button onclick="restartGame()">RECOMMENCER L'AVENTURE !</button>
+        </div>
+    `;
+    
+    document.body.appendChild(endModal);
+}
+
+function restartGame() {
+    const playerName = gameState.playerName;
+    
+    gameState = {
+        wood: 0,
+        beer: 0,
+        tools: {
+            axe: 0,
+            chainsaw: 0
+        },
+        workers: {
+            manual: 0,
+            axe: 0,
+            chainsaw: 0
+        },
+        stats: {
+            totalTrees: 0,
+            totalWood: 0,
+            totalBeers: 0,
+            totalClicks: 0,
+            workersHired: 0
+        },
+        playerName: playerName,
+        gameStartTime: Date.now()
+    };
+    
+    document.querySelector('.modal-overlay:last-child').remove();
+    document.querySelector('.game-container').style.display = 'flex';
+    
+    updateDisplay();
+    updateStats();
+    currentTree.hp = 10;
+    updateTreeHP();
+} 
