@@ -35,15 +35,15 @@ async function loadGameConfig() {
 
 let gameState = {
     wood: 0,
-    beer: 419,
+    beer: 0,
     currentTool: 'manual',
     treeHP: 10,
     maxTreeHP: 10,
     axeLevel: 1,
     workers: {
-        ptitLu: 200,
-        mathieu: 200,
-        vico: 200
+        ptitLu: 0,
+        mathieu: 0,
+        vico: 0
     },
     stats: {
         totalTreesChopped: 0,
