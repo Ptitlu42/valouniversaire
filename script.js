@@ -9,9 +9,9 @@ const DIFFICULTY_CONFIG = {
         beer: 4
     },
     priceMultipliers: {
-        upgrade: 1.2,
-        worker: 1.025,
-        beer: 1.025
+        upgrade: 1.15,
+        worker: 1.018,
+        beer: 1.022
     },
     toolEfficiency: {
         manual: 1
@@ -47,9 +47,9 @@ let gameState = {
     maxTreeHP: 10,
     axeLevel: 1,
     workers: {
-        ptitLu: 400,
-        mathieu: 400,
-        vico: 400
+        ptitLu: 200,
+        mathieu: 200,
+        vico: 200
     },
     stats: {
         totalTreesChopped: 0,
@@ -64,7 +64,16 @@ let gameState = {
         woodGainHistory: []
     },
     playerName: '',
-    gameStartTime: null
+    gameStartTime: null,
+    tutorial: {
+        enabled: true,
+        shownSteps: {
+            start: false,
+            beer: false,
+            axe: false,
+            workers: false
+        }
+    }
 };
 
 function calculatePrice(basePrice, quantity, type = 'worker') {
@@ -164,6 +173,18 @@ function showAperitifAnimation() {
     const animation = document.createElement('div');
     animation.className = 'aperitif-animation';
     animation.textContent = 'APEROOOO!';
+    
+    const isMobile = window.innerWidth <= 768;
+    const isSmallMobile = window.innerWidth <= 480;
+    
+    let fontSize = '8rem';
+    if (isSmallMobile) {
+        fontSize = '3rem';
+    } else if (isMobile) {
+        fontSize = '5rem';
+    }
+    
+    animation.style.fontSize = fontSize;
     
     document.body.appendChild(animation);
     
@@ -326,6 +347,24 @@ function showFloatingText(text, color = '#ffd93d') {
 function showUpgradeAnimation(text, color = '#ffd93d') {
     const upgradeText = document.createElement('div');
     upgradeText.textContent = text;
+    
+    const isMobile = window.innerWidth <= 768;
+    const isSmallMobile = window.innerWidth <= 480;
+    
+    let fontSize = '3rem';
+    let whiteSpace = 'nowrap';
+    let maxWidth = 'none';
+    
+    if (isSmallMobile) {
+        fontSize = '1.2rem';
+        whiteSpace = 'normal';
+        maxWidth = '85vw';
+    } else if (isMobile) {
+        fontSize = '1.6rem';
+        whiteSpace = 'normal';
+        maxWidth = '90vw';
+    }
+    
     upgradeText.style.cssText = `
         position: fixed;
         top: 50%;
@@ -333,13 +372,16 @@ function showUpgradeAnimation(text, color = '#ffd93d') {
         transform: translate(-50%, -50%);
         color: ${color};
         font-weight: bold;
-        font-size: 3rem;
+        font-size: ${fontSize};
         text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
         pointer-events: none;
         z-index: 2000;
         animation: upgradePopup 2.5s ease-out forwards;
         text-align: center;
-        white-space: nowrap;
+        white-space: ${whiteSpace};
+        max-width: ${maxWidth};
+        line-height: 1.2;
+        padding: 0 10px;
     `;
     
     document.body.appendChild(upgradeText);
@@ -383,7 +425,7 @@ function buyWorker(workerType) {
         
         updateUI();
         const messages = {
-            ptitLu: ' +1 PtitLu ! (Il va faire de son mieux... 😅)',
+            ptitLu: " +1 P'tit Lu ! (Il va faire de son mieux...)",
             mathieu: 'Un Mathieu rejoint l\'équipe ! (Solide recrue 👍)', 
             vico: 'UN VICO DE PLUS ! (Attention les arbres, la légende arrive! 🔥)'
         };
@@ -400,16 +442,6 @@ function purchaseBeer() {
         
         showAperitifAnimation();
         updateUI();
-        
-        const beerMessages = [
-            '🍺 Une de plus pour Valou !',
-            '🍺 Valou approuve ce choix !',
-            '🍺 Encore une petite mousse !',
-            '🍺 Valou est de plus en plus content !',
-            '🍺 La soif de Valou n\'a pas de limite !'
-        ];
-        const randomMessage = beerMessages[Math.floor(Math.random() * beerMessages.length)];
-        showFloatingText(randomMessage, '#ffd93d');
         
         if (gameState.beer >= DIFFICULTY_CONFIG.beer.targetBeers) {
             showEndScreen();
@@ -428,6 +460,7 @@ function updateUI() {
     updateWorkerCounts();
     updateValouHappiness();
     updateStats();
+    checkTutorialTriggers();
 }
 
 function updateShopButtons() {
@@ -624,6 +657,7 @@ console.log('Script loaded successfully');
 function startGame() {
     const playerNameInput = document.getElementById('playerName');
     const playerName = playerNameInput.value.trim();
+    const skipTutorial = document.getElementById('skipTutorial').checked;
     
     if (!playerName) {
         alert('Tu dois entrer ton nom, brave bûcheron !');
@@ -637,11 +671,17 @@ function startGame() {
     
     gameState.playerName = playerName;
     gameState.gameStartTime = Date.now();
+    gameState.tutorial.enabled = !skipTutorial;
     
     document.getElementById('welcomeModal').style.display = 'none';
     document.querySelector('.game-container').style.display = 'flex';
     
     startGameTimer();
+    
+    if (gameState.tutorial.enabled) {
+        setTimeout(() => showTutorialStep('start'), 500);
+    }
+    
     console.log('Game started for player:', playerName);
 }
 
@@ -671,13 +711,13 @@ function showEndScreen() {
     endModal.className = 'modal-overlay';
     endModal.innerHTML = `
         <div class="modal end-screen">
-            <h2>🎉 GG mon reuf ! 🎉</h2>
-            <p>Tu as réussi à faire boire Valou comme un chef ! 🍺</p>
+            <h2>C'EST LA VALOUTE</h2>
+            <p>Tu as réussi à finir le Valou ! 🍺</p>
             <p class="beer-emoji">🍺</p>
-            <p><strong>C'est la valoute !</strong></p>
+            <p><strong>GG</strong></p>
             
             <div class="stats-table">
-                <h3>📊 Ton tableau de bord de BG</h3>
+                <h3>📊 Tes stats</h3>
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-icon">⏱️</div>
@@ -702,7 +742,7 @@ function showEndScreen() {
                     <div class="stat-card">
                         <div class="stat-icon">👆</div>
                         <div class="stat-value">${gameState.stats.totalClicks}</div>
-                        <div class="stat-label">Clics de warrior</div>
+                        <div class="stat-label">Clics</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon">👥</div>
@@ -1031,7 +1071,16 @@ function restartGame() {
             woodGainHistory: []
         },
         playerName: playerName,
-        gameStartTime: Date.now()
+        gameStartTime: Date.now(),
+        tutorial: {
+            enabled: false,
+            shownSteps: {
+                start: false,
+                beer: false,
+                axe: false,
+                workers: false
+            }
+        }
     };
     
     document.querySelector('.modal-overlay:last-child').remove();
@@ -1041,4 +1090,70 @@ function restartGame() {
     updateStats();
     respawnTree();
     updateTreeHP();
+}
+
+function showTutorialStep(step) {
+    if (!gameState.tutorial.enabled || gameState.tutorial.shownSteps[step]) {
+        return;
+    }
+    
+    gameState.tutorial.shownSteps[step] = true;
+    
+    const tutorials = {
+        start: {
+            title: ' Premier contact !',
+            text: 'Clique sur l\'arbre 🌳 pour le couper et récupérer du bois ! Plus tu cliques, plus tu deviens fort ! '
+        },
+        beer: {
+            title: ' Première bière !',
+            text: 'Bravo ! Tu peux maintenant acheter une bière pour Valou ! Chaque bière augmente tes gains de bois ! '
+        },
+        axe: {
+            title: ' Upgrade time !',
+            text: 'Tu peux améliorer ta hache ! Plus elle est forte, plus tu fais de dégâts par clic ! '
+        },
+        workers: {
+            title: ' Recrute tes potes !',
+            text: 'Embauche des copains pour t\'aider ! PtitLu est pas ouf, Mathieu est solide, Vico est une légende ! '
+        }
+    };
+    
+    const tutorial = tutorials[step];
+    if (!tutorial) return;
+    
+    const modal = document.createElement('div');
+    modal.className = 'tutorial-modal';
+    modal.innerHTML = `
+        <div class="tutorial-content">
+            <h3>${tutorial.title}</h3>
+            <p>${tutorial.text}</p>
+            <button class="tutorial-btn" onclick="closeTutorial(this)">Compris ! 👍</button>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+function closeTutorial(button) {
+    const modal = button.closest('.tutorial-modal');
+    if (modal) {
+        modal.style.animation = 'fadeOut 0.3s ease';
+        setTimeout(() => {
+            if (modal.parentNode) {
+                modal.parentNode.removeChild(modal);
+            }
+        }, 300);
+    }
+}
+
+function checkTutorialTriggers() {
+    if (!gameState.tutorial.enabled) return;
+    
+    if (gameState.wood >= 4 && !gameState.tutorial.shownSteps.beer) {
+        showTutorialStep('beer');
+    } else if (gameState.wood >= 15 && !gameState.tutorial.shownSteps.axe) {
+        showTutorialStep('axe');
+    } else if (gameState.wood >= 25 && !gameState.tutorial.shownSteps.workers) {
+        showTutorialStep('workers');
+    }
 } 

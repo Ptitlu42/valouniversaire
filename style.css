@@ -500,6 +500,11 @@ body {
     to { opacity: 1; }
 }
 
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
 @keyframes slideIn {
     from { transform: translateY(-50px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
@@ -675,80 +680,89 @@ body {
 
 @media (max-width: 768px) {
     body {
-        font-size: 13px;
+        font-size: 12px;
     }
     
     .game-container {
-        padding: 8px;
+        padding: 6px;
         background: linear-gradient(135deg, #0a0a0a, #1a1a1a);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
     }
     
     .header {
-        padding: 12px;
+        padding: 10px;
+        margin-bottom: 8px;
+    }
+    
+    .header h1 {
+        font-size: 1.3rem;
+        margin-bottom: 8px;
     }
     
     .player-name {
-        font-size: 1rem;
-        margin-bottom: 8px;
+        font-size: 0.9rem;
+        margin-bottom: 6px;
     }
     
     .game-stats {
         flex-direction: column;
-        gap: 10px;
+        gap: 8px;
         padding: 8px;
     }
     
     .speed-stats {
         flex-direction: row;
-        gap: 15px;
+        gap: 10px;
         justify-content: center;
-        font-size: 1.1rem;
+        font-size: 1rem;
     }
     
     .speed-item {
-        font-size: 1.1rem;
-        padding: 8px 12px;
-        min-width: 95px;
+        font-size: 1rem;
+        padding: 6px 10px;
+        min-width: 85px;
     }
     
     .timer-display {
-        font-size: 0.9rem;
+        font-size: 0.8rem;
         padding: 4px 8px;
         align-self: center;
-        min-width: 70px;
+        min-width: 60px;
+    }
+    
+    .valou-happiness {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        width: 100%;
     }
     
     .valou-face {
-        font-size: 1.3rem;
+        font-size: 1.2rem;
+        flex-shrink: 0;
     }
     
     .happiness-bar {
-        width: 280px;
-        height: 18px;
+        width: 200px;
+        height: 16px;
+        flex-grow: 1;
+        max-width: 250px;
     }
     
     .happiness-text {
-        font-size: 0.9rem;
-    }
-    
-    .main-tree {
-        font-size: 5rem;
-        padding: 15px;
-    }
-    
-    .tree-hp-container {
-        top: 10px;
-        left: 10px;
-        right: 10px;
-    }
-    
-    .tree-hp-bar {
-        height: 18px;
+        font-size: 0.8rem;
+        flex-shrink: 0;
+        white-space: nowrap;
     }
     
     .main-game {
-        min-height: 300px;
+        min-height: 280px;
         cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><text y="36" font-size="36">🪓</text></svg>') 24 24, auto;
+        flex-shrink: 0;
     }
     
     .main-game.chopping-cursor {
@@ -756,6 +770,8 @@ body {
     }
     
     .main-tree {
+        font-size: 4.5rem;
+        padding: 12px;
         cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><text y="36" font-size="36">🪓</text></svg>') 24 24, pointer;
     }
     
@@ -763,110 +779,235 @@ body {
         cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><text y="36" font-size="36" transform="rotate(-45 24 24)">🪓</text></svg>') 24 24, pointer;
     }
     
+    .tree-hp-container {
+        top: 8px;
+        left: 8px;
+        right: 8px;
+    }
+    
+    .tree-hp-bar {
+        height: 16px;
+    }
+    
     .game-ui {
         grid-template-columns: 1fr;
-        gap: 10px;
+        gap: 8px;
+        order: 1;
+    }
+    
+    .shop {
+        order: -1;
     }
     
     .inventory, .shop, .workers, .statistics {
-        padding: 12px;
+        padding: 10px;
     }
     
     .inventory h3, .shop h3, .workers h3, .statistics h3 {
-        font-size: 1.1rem;
-        margin-bottom: 10px;
+        font-size: 1rem;
+        margin-bottom: 8px;
     }
     
     .inventory-item, .worker-item, .stat-item {
-        padding: 8px 10px;
-        font-size: 0.9rem;
-        margin-bottom: 4px;
+        padding: 6px 8px;
+        font-size: 0.85rem;
+        margin-bottom: 3px;
     }
     
     .shop-item {
-        font-size: 0.8rem;
-        padding: 10px 12px;
-        margin-bottom: 6px;
+        font-size: 0.75rem;
+        padding: 8px 10px;
+        margin-bottom: 5px;
+        line-height: 1.2;
     }
     
     .shop-section h4 {
-        font-size: 0.9rem;
-        margin-bottom: 6px;
+        font-size: 0.85rem;
+        margin-bottom: 5px;
     }
     
     .falling-particle {
-        font-size: 1.5rem;
+        font-size: 1.3rem;
     }
     
     .modal h1 {
-        font-size: 2rem;
+        font-size: 1.8rem;
     }
     
     .modal p {
-        font-size: 1rem;
+        font-size: 0.9rem;
     }
     
-    .end-screen h1 {
-        font-size: 3rem;
+    .modal {
+        padding: 20px;
+        max-width: 95%;
+    }
+    
+    .end-screen h1, .end-screen h2 {
+        font-size: 2.5rem;
     }
     
     .aperitif-animation {
-        font-size: 5rem;
+        font-size: 4rem;
     }
     
     .glougou {
-        font-size: 2rem;
+        font-size: 1.8rem;
     }
     
     .beer-emoji {
-        font-size: 3rem;
+        font-size: 2.5rem;
     }
     
     .end-screen {
         max-width: 95%;
-        padding: 20px;
+        padding: 15px;
+        max-height: 85vh;
     }
     
     .stats-table {
-        margin: 20px 0;
-        padding: 15px;
+        margin: 15px 0;
+        padding: 12px;
+    }
+    
+    .stats-table h3 {
+        font-size: 1.2rem;
+        margin-bottom: 10px;
     }
     
     .stats-grid {
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 10px;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
     }
     
     .stat-card {
-        padding: 15px;
+        padding: 12px;
     }
     
     .stat-icon {
-        font-size: 2rem;
+        font-size: 1.8rem;
+        margin-bottom: 5px;
     }
     
     .stat-value {
-        font-size: 1.4rem;
+        font-size: 1.2rem;
+        margin-bottom: 3px;
     }
     
     .stat-label {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
     }
     
     .social-share {
-        margin: 20px 0;
-        padding: 15px;
+        margin: 15px 0;
+        padding: 12px;
     }
     
     .share-btn-main {
-        padding: 12px 25px;
-        font-size: 1rem;
-        max-width: 250px;
+        padding: 10px 20px;
+        font-size: 0.9rem;
+        max-width: 100%;
     }
     
     .restart-btn {
-        padding: 12px 20px;
-        font-size: 1rem;
+        padding: 10px 15px;
+        font-size: 0.9rem;
+        margin-top: 10px;
+    }
+    
+    .statistics-section {
+        order: 2;
+    }
+}
+
+@media (max-width: 480px) {
+    .game-container {
+        padding: 4px;
+        gap: 6px;
+    }
+    
+    .header {
+        padding: 8px;
+    }
+    
+    .speed-stats {
+        gap: 8px;
+    }
+    
+    .speed-item {
+        font-size: 0.9rem;
+        padding: 5px 8px;
+        min-width: 75px;
+    }
+    
+    .valou-happiness {
+        gap: 4px;
+    }
+    
+    .happiness-bar {
+        width: 150px;
+        height: 14px;
+    }
+    
+    .happiness-text {
+        font-size: 0.7rem;
+    }
+    
+    .main-game {
+        min-height: 240px;
+    }
+    
+    .main-tree {
+        font-size: 3.8rem;
+        padding: 10px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+    
+    .shop-item {
+        font-size: 0.7rem;
+        padding: 6px 8px;
+    }
+    
+    .modal {
+        padding: 15px;
+    }
+    
+    .modal h1 {
+        font-size: 1.5rem;
+    }
+    
+    .modal p {
+        font-size: 0.8rem;
+    }
+    
+    .end-screen {
+        padding: 10px;
+    }
+    
+    @keyframes upgradePopup {
+        0% {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.2);
+        }
+        20% {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(0.6);
+        }
+        40% {
+            transform: translate(-50%, -50%) scale(0.5);
+        }
+        80% {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(0.5);
+        }
+        100% {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.3);
+        }
     }
 }
 
@@ -978,4 +1119,214 @@ body {
     transform: translateY(-3px);
     box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
     background: linear-gradient(135deg, #ff5252, #e53935);
+}
+
+.tutorial-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 3000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease;
+}
+
+.tutorial-content {
+    background: linear-gradient(135deg, #2d4a2d, #1a3a1a);
+    border-radius: 15px;
+    padding: 25px;
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    border: 3px solid #ffd93d;
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.6);
+    animation: slideIn 0.3s ease;
+}
+
+.tutorial-content h3 {
+    color: #ffd93d;
+    font-size: 1.4rem;
+    margin-bottom: 15px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+}
+
+.tutorial-content p {
+    color: #e0e0e0;
+    font-size: 1rem;
+    line-height: 1.4;
+    margin-bottom: 20px;
+}
+
+.tutorial-btn {
+    background: linear-gradient(135deg, #ffd93d, #ffb93d);
+    color: #2d4a2d;
+    border: none;
+    padding: 12px 25px;
+    font-size: 1rem;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+}
+
+.tutorial-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 217, 61, 0.4);
+}
+
+.skip-tutorial-container {
+    margin: 20px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.skip-tutorial-container:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 217, 61, 0.3);
+}
+
+.custom-checkbox {
+    position: relative;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+}
+
+.custom-checkbox input[type="checkbox"] {
+    opacity: 0;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    cursor: pointer;
+}
+
+.custom-checkbox .checkmark {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 24px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.custom-checkbox input[type="checkbox"]:checked + .checkmark {
+    background: linear-gradient(135deg, #ffd93d, #ffb93d);
+    border-color: #ffd93d;
+}
+
+.custom-checkbox .checkmark:after {
+    content: "";
+    position: absolute;
+    display: none;
+    left: 8px;
+    top: 4px;
+    width: 6px;
+    height: 10px;
+    border: solid #2d4a2d;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.custom-checkbox input[type="checkbox"]:checked + .checkmark:after {
+    display: block;
+}
+
+.skip-tutorial-label {
+    color: #e0e0e0;
+    font-size: 1rem;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.3s ease;
+}
+
+.skip-tutorial-container:hover .skip-tutorial-label {
+    color: #ffd93d;
+}
+
+@media (max-width: 768px) {
+    .tutorial-content {
+        max-width: 95%;
+        padding: 20px;
+    }
+    
+    .tutorial-content h3 {
+        font-size: 1.2rem;
+        margin-bottom: 12px;
+    }
+    
+    .tutorial-content p {
+        font-size: 0.9rem;
+        margin-bottom: 15px;
+    }
+    
+    .tutorial-btn {
+        font-size: 0.9rem;
+        padding: 10px 20px;
+    }
+    
+    .skip-tutorial-container {
+        padding: 12px;
+        gap: 10px;
+    }
+    
+    .skip-tutorial-label {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .tutorial-content {
+        padding: 15px;
+    }
+    
+    .tutorial-content h3 {
+        font-size: 1.1rem;
+    }
+    
+    .tutorial-content p {
+        font-size: 0.85rem;
+    }
+    
+    .tutorial-btn {
+        font-size: 0.85rem;
+        padding: 8px 18px;
+    }
+    
+    .skip-tutorial-container {
+        padding: 10px;
+        gap: 8px;
+    }
+    
+    .skip-tutorial-label {
+        font-size: 0.85rem;
+    }
+    
+    .custom-checkbox,
+    .custom-checkbox .checkmark {
+        width: 20px;
+        height: 20px;
+    }
+    
+    .custom-checkbox .checkmark:after {
+        left: 6px;
+        top: 2px;
+        width: 5px;
+        height: 8px;
+    }
 } 
