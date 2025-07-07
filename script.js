@@ -713,13 +713,13 @@ function showEndScreen() {
     endModal.className = 'modal-overlay';
     endModal.innerHTML = `
         <div class="modal end-screen">
-            <h2>🎉 GG mon reuf ! 🎉</h2>
-            <p>Tu as réussi à faire boire Valou comme un chef ! 🍺</p>
+            <h2>C'EST LA VALOUTE</h2>
+            <p>Tu as réussi à finir le Valou</p>
             <p class="beer-emoji">🍺</p>
-            <p><strong>C'est la valoute !</strong></p>
+            <p><strong>GG</strong></p>
             
             <div class="stats-table">
-                <h3>📊 Ton tableau de bord de BG</h3>
+                <h3>Ton tableau de bord</h3>
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-icon">⏱️</div>
@@ -744,7 +744,7 @@ function showEndScreen() {
                     <div class="stat-card">
                         <div class="stat-icon">👆</div>
                         <div class="stat-value">${gameState.stats.totalClicks}</div>
-                        <div class="stat-label">Clics de warrior</div>
+                        <div class="stat-label">Clics</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon">👥</div>
@@ -771,7 +771,8 @@ function showEndScreen() {
             
             <div class="social-share">
                 <div class="share-buttons">
-                    <button class="share-btn-main" onclick="shareResults()">Partager mon score !</button>
+                    <button class="share-btn-main" onclick="shareResults()">Partager mon score</button>
+                    <button class="scores-btn-end" onclick="showScoresModal()">SCORES 🏆</button>
                     <button class="restart-btn" onclick="restartGame()">Recommencer une partie</button>
                 </div>
             </div>
@@ -1249,5 +1250,102 @@ function checkTutorialTriggers() {
         showTutorialStep('axe');
     } else if (gameState.wood >= 25 && !gameState.tutorial.shownSteps.workers) {
         showTutorialStep('workers');
+    }
+}
+
+function showScoresModal() {
+    fetch('get_scores.php')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayScoresModal(data.scores);
+            } else {
+                console.error('Erreur lors du chargement des scores');
+                displayScoresModal([]);
+            }
+        })
+        .catch(error => {
+            console.error('Erreur lors de la récupération des scores:', error);
+            displayScoresModal([]);
+        });
+}
+
+function displayScoresModal(scores) {
+    const modal = document.createElement('div');
+    modal.className = 'scores-modal';
+    
+    let scoresHTML = '';
+    
+    if (scores.length === 0) {
+        scoresHTML = '<div class="no-scores">Aucun score enregistré pour le moment.<br>Sois le premier à Valouté ! 🏆</div>';
+    } else {
+        scoresHTML = `
+            <div class="scores-header">
+                <div>Rank</div>
+                <div>Joueur</div>
+                <div>Temps</div>
+                <div>Date</div>
+            </div>
+            <div class="scores-list">
+        `;
+        
+        scores.forEach((score, index) => {
+            const rankClass = (index + 1) <= 3 ? `rank-${index + 1}` : '';
+            const dateObj = new Date(score.gameDate);
+            const dateFormatted = dateObj.toLocaleDateString('fr-FR', {
+                day: '2-digit',
+                month: '2-digit', 
+                year: 'numeric'
+            });
+            const timeFormatted = dateObj.toLocaleTimeString('fr-FR', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            const dateTimeFormatted = `${dateFormatted} ${timeFormatted}`;
+            const rankEmoji = getRankEmoji(index + 1);
+            
+            scoresHTML += `
+                <div class="score-item ${rankClass}">
+                    <div class="score-rank">${rankEmoji}${index + 1}</div>
+                    <div class="score-name">${score.playerName}</div>
+                    <div class="score-time">${score.gameTimeFormatted}</div>
+                    <div class="score-date">${dateTimeFormatted}</div>
+                </div>
+            `;
+        });
+        
+        scoresHTML += '</div>';
+    }
+    
+    modal.innerHTML = `
+        <div class="scores-content">
+            <h2>🏆 HALL OF FAME 🏆</h2>
+            <p>Les légendes de la VALOUTE !</p>
+            ${scoresHTML}
+            <button class="close-scores-btn" onclick="closeScoresModal()">Fermer</button>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+function getRankEmoji(rank) {
+    switch (rank) {
+        case 1: return '🥇 ';
+        case 2: return '🥈 ';
+        case 3: return '🥉 ';
+        default: return '';
+    }
+}
+
+function closeScoresModal() {
+    const modal = document.querySelector('.scores-modal');
+    if (modal) {
+        modal.style.animation = 'fadeOut 0.3s ease';
+        setTimeout(() => {
+            if (modal.parentNode) {
+                modal.parentNode.removeChild(modal);
+            }
+        }, 300);
     }
 } 
