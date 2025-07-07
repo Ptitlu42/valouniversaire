@@ -22,12 +22,21 @@
         <header class="header">
             <h1>🎂 Valouniversaire Game 🎂</h1>
             <div class="player-name">Joueur : <span id="displayPlayerName"></span></div>
-            <div class="valou-happiness">
-                <span class="valou-face">😊</span>
-                <div class="happiness-bar">
-                    <div class="happiness-fill"></div>
+            <div class="game-stats">
+                <div class="speed-stats">
+                    <div class="speed-item">🪵/s: <span id="woodPerSecond">0.0</span></div>
+                    <div class="speed-item">👆/s: <span id="clicksPerSecond">0.0</span></div>
                 </div>
-                <span class="happiness-text">0/420 🍺</span>
+                <div class="valou-happiness">
+                    <span class="valou-face">😊</span>
+                    <div class="happiness-bar">
+                        <div class="happiness-fill"></div>
+                    </div>
+                    <span class="happiness-text">0/420 🍺</span>
+                </div>
+                <div class="timer-display">
+                    ⏱️ <span id="gameTime">00:00</span>
+                </div>
             </div>
         </header>
 
@@ -59,24 +68,21 @@
                 <h3>🛒 Boutique</h3>
                 <div class="shop-section">
                     <h4>Outils</h4>
-                    <button class="shop-item" id="buyAxe" disabled>
-                        🪓 Hache - 10 🪵
-                    </button>
-                    <button class="shop-item" id="buyChainsaw" disabled>
-                        🔧 Tronçonneuse - 50 🪵
+                    <button class="shop-item" id="upgradeAxe" disabled>
+                        🪓 Améliorer ma hache - 15 🪵
                     </button>
                 </div>
                 
                 <div class="shop-section">
                     <h4>Bûcherons</h4>
-                    <button class="shop-item" id="buyManualWorker" disabled>
-                        👷 Bûcheron Manuel - 25 🪵
+                    <button class="shop-item" id="buyPtitLu" disabled>
+                        😴 Ptit Lu (nul) - 25 🪵
                     </button>
-                    <button class="shop-item" id="buyAxeWorker" disabled>
-                        🪓👷 Bûcheron Hache - 100 🪵
+                    <button class="shop-item" id="buyMathieu" disabled>
+                        😐 Mathieu (moyen) - 100 🪵
                     </button>
-                    <button class="shop-item" id="buyChainsawWorker" disabled>
-                        🔧👷 Bûcheron Tronçonneuse - 300 🪵
+                    <button class="shop-item" id="buyVico" disabled>
+                        💪 Vico (fort) - 300 🪵
                     </button>
                 </div>
                 
@@ -91,16 +97,16 @@
                 <h3>👷 Équipe</h3>
                 <div class="worker-list">
                     <div class="worker-item">
-                        <span>👷 Manuel:</span>
-                        <span id="manualWorkerCount">0</span>
+                        <span>😴 Ptit Lu:</span>
+                        <span id="ptitLuCount">0</span>
                     </div>
                     <div class="worker-item">
-                        <span>🪓👷 Hache:</span>
-                        <span id="axeWorkerCount">0</span>
+                        <span>😐 Mathieu:</span>
+                        <span id="mathieuCount">0</span>
                     </div>
                     <div class="worker-item">
-                        <span>🔧👷 Tronçonneuse:</span>
-                        <span id="chainsawWorkerCount">0</span>
+                        <span>💪 Vico:</span>
+                        <span id="vicoCount">0</span>
                     </div>
                 </div>
             </div>
@@ -128,10 +134,6 @@
                 <div class="stat-item">
                     <span>👷 Embauches:</span>
                     <span id="workersHired">0</span>
-                </div>
-                <div class="stat-item">
-                    <span>⏱️ Temps de jeu:</span>
-                    <span id="gameTime">00:00</span>
                 </div>
             </div>
         </div>

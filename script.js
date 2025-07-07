@@ -6,37 +6,39 @@ let gameState = {
     currentTool: 'manual',
     treeHP: 10,
     maxTreeHP: 10,
+    axeLevel: 1,
     workers: {
-        manual: 0,
-        axe: 0,
-        chainsaw: 0
-    },
-    tools: {
-        axe: false,
-        chainsaw: false
+        ptitLu: 0,
+        mathieu: 0,
+        vico: 0
     },
     stats: {
         totalTreesChopped: 0,
         totalWoodGained: 0,
         totalBeersConsumed: 0,
         totalClicks: 0,
-        workersHired: 0
+        workersHired: 0,
+        lastClickTime: Date.now(),
+        clicksInLastSecond: 0,
+        recentClicks: [],
+        woodPerSecond: 0
     },
     playerName: '',
     gameStartTime: null
 };
 
 const basePrices = {
-    axe: 10,
-    chainsaw: 50,
-    manualWorker: 25,
-    axeWorker: 100,
-    chainsawWorker: 300,
+    axeUpgrade: 15,
+    ptitLu: 25,
+    mathieu: 100,
+    vico: 300,
     beer: 4
 };
 
 function calculatePrice(basePrice, quantity, type = 'worker') {
-    if (type === 'tool') return basePrice;
+    if (type === 'upgrade') {
+        return Math.floor(basePrice * Math.pow(1.5, quantity - 1));
+    }
     if (type === 'beer') {
         return Math.floor(basePrice * Math.pow(1.1, quantity));
     }
@@ -45,25 +47,28 @@ function calculatePrice(basePrice, quantity, type = 'worker') {
 
 function getCurrentPrices() {
     return {
-        axe: basePrices.axe,
-        chainsaw: basePrices.chainsaw,
-        manualWorker: calculatePrice(basePrices.manualWorker, gameState.workers.manual, 'worker'),
-        axeWorker: calculatePrice(basePrices.axeWorker, gameState.workers.axe, 'worker'),
-        chainsawWorker: calculatePrice(basePrices.chainsawWorker, gameState.workers.chainsaw, 'worker'),
+        axeUpgrade: calculatePrice(basePrices.axeUpgrade, gameState.axeLevel, 'upgrade'),
+        ptitLu: calculatePrice(basePrices.ptitLu, gameState.workers.ptitLu, 'worker'),
+        mathieu: calculatePrice(basePrices.mathieu, gameState.workers.mathieu, 'worker'),
+        vico: calculatePrice(basePrices.vico, gameState.workers.vico, 'worker'),
         beer: calculatePrice(basePrices.beer, gameState.beer, 'beer')
     };
 }
 
 const toolEfficiency = {
-    manual: 1,
-    axe: 2,
-    chainsaw: 4
+    manual: 1
+};
+
+const workerEfficiency = {
+    ptitLu: 0.5,
+    mathieu: 2,
+    vico: 5
 };
 
 const workerSpeed = {
-    manual: 800,
-    axe: 500,
-    chainsaw: 300
+    ptitLu: 1200,
+    mathieu: 600,
+    vico: 400
 };
 
 let workerIntervals = {};
@@ -102,11 +107,44 @@ function createFallingParticles() {
     }
 }
 
+function updateSpeedDisplays() {
+    const now = Date.now();
+    gameState.stats.recentClicks = gameState.stats.recentClicks.filter(time => now - time < 1000);
+    
+    const clicksPerSecond = gameState.stats.recentClicks.length;
+    
+    const totalWorkerWoodPerSecond = 
+        (gameState.workers.ptitLu * workerEfficiency.ptitLu * (1000 / workerSpeed.ptitLu)) +
+        (gameState.workers.mathieu * workerEfficiency.mathieu * (1000 / workerSpeed.mathieu)) +
+        (gameState.workers.vico * workerEfficiency.vico * (1000 / workerSpeed.vico));
+    
+    const woodPerSecondElement = document.getElementById('woodPerSecond');
+    const clicksPerSecondElement = document.getElementById('clicksPerSecond');
+    
+    if (woodPerSecondElement) woodPerSecondElement.textContent = totalWorkerWoodPerSecond.toFixed(1);
+    if (clicksPerSecondElement) clicksPerSecondElement.textContent = clicksPerSecond.toFixed(1);
+}
+
+function showAperitifAnimation() {
+    const animation = document.createElement('div');
+    animation.className = 'aperitif-animation';
+    animation.textContent = 'APEROOOO!';
+    
+    document.body.appendChild(animation);
+    
+    setTimeout(() => {
+        if (animation.parentNode) {
+            animation.parentNode.removeChild(animation);
+        }
+    }, 2000);
+}
+
 function chopTree() {
     console.log('Tree chopped!');
-    const damage = toolEfficiency[gameState.currentTool];
+    const damage = gameState.axeLevel;
     gameState.treeHP -= damage;
     gameState.stats.totalClicks++;
+    gameState.stats.recentClicks.push(Date.now());
     
     const mainTree = document.getElementById('mainTree');
     if (mainTree) {
@@ -150,30 +188,31 @@ function updateTreeHP() {
     }
 }
 
-function buyTool(tool) {
+function upgradeAxe() {
     const prices = getCurrentPrices();
-    if (gameState.wood >= prices[tool] && !gameState.tools[tool]) {
-        gameState.wood -= prices[tool];
-        gameState.tools[tool] = true;
-        gameState.currentTool = tool;
+    if (gameState.wood >= prices.axeUpgrade) {
+        gameState.wood -= prices.axeUpgrade;
+        gameState.axeLevel++;
         updateUI();
-        showFloatingText(`🪓 ${tool === 'axe' ? 'Hache' : 'Tronçonneuse'} achetée !`, '#ffd93d');
+        showFloatingText(`🪓 Hache niveau ${gameState.axeLevel} !`, '#ffd93d');
     }
 }
 
 function buyWorker(workerType) {
     const prices = getCurrentPrices();
-    const price = prices[workerType + 'Worker'];
-    const canBuy = workerType === 'manual' || 
-                  (workerType === 'axe' && gameState.tools.axe) ||
-                  (workerType === 'chainsaw' && gameState.tools.chainsaw);
+    const price = prices[workerType];
 
-    if (gameState.wood >= price && canBuy) {
+    if (gameState.wood >= price) {
         gameState.wood -= price;
         gameState.workers[workerType]++;
         gameState.stats.workersHired++;
         updateUI();
-        showFloatingText(`👷 Bûcheron ${workerType} embauché !`, '#ffd93d');
+        const names = {
+            ptitLu: 'Ptit Lu',
+            mathieu: 'Mathieu', 
+            vico: 'Vico'
+        };
+        showFloatingText(`${names[workerType]} embauché !`, '#ffd93d');
     }
 }
 
@@ -183,13 +222,15 @@ function purchaseBeer() {
         gameState.wood -= prices.beer;
         gameState.beer++;
         gameState.stats.totalBeersConsumed++;
+        
+        showAperitifAnimation();
         updateUI();
         showFloatingText('🍺 Bière achetée !', '#ffd93d');
         
         if (gameState.beer >= 420) {
             setTimeout(() => {
                 showEndScreen();
-            }, 1000);
+            }, 2500);
         }
     }
 }
@@ -209,44 +250,30 @@ function updateUI() {
 
 function updateShopButtons() {
     const prices = getCurrentPrices();
-    const buyAxe = document.getElementById('buyAxe');
-    const buyChainsaw = document.getElementById('buyChainsaw');
-    const buyManualWorker = document.getElementById('buyManualWorker');
-    const buyAxeWorker = document.getElementById('buyAxeWorker');
-    const buyChainsawWorker = document.getElementById('buyChainsawWorker');
+    const upgradeAxe = document.getElementById('upgradeAxe');
+    const buyPtitLu = document.getElementById('buyPtitLu');
+    const buyMathieu = document.getElementById('buyMathieu');
+    const buyVico = document.getElementById('buyVico');
     const buyBeer = document.getElementById('buyBeer');
 
-    if (buyAxe) {
-        buyAxe.disabled = gameState.wood < prices.axe || gameState.tools.axe;
-        if (gameState.tools.axe) {
-            buyAxe.textContent = '🪓 Hache - Acheté ✓';
-        } else {
-            buyAxe.textContent = `🪓 Hache - ${prices.axe} 🪵`;
-        }
+    if (upgradeAxe) {
+        upgradeAxe.disabled = gameState.wood < prices.axeUpgrade;
+        upgradeAxe.textContent = `🪓 Améliorer ma hache (niv.${gameState.axeLevel}) - ${prices.axeUpgrade} 🪵`;
     }
     
-    if (buyChainsaw) {
-        buyChainsaw.disabled = gameState.wood < prices.chainsaw || !gameState.tools.axe || gameState.tools.chainsaw;
-        if (gameState.tools.chainsaw) {
-            buyChainsaw.textContent = '🔧 Tronçonneuse - Acheté ✓';
-        } else {
-            buyChainsaw.textContent = `🔧 Tronçonneuse - ${prices.chainsaw} 🪵`;
-        }
+    if (buyPtitLu) {
+        buyPtitLu.disabled = gameState.wood < prices.ptitLu;
+        buyPtitLu.textContent = `😴 Ptit Lu (nul) - ${prices.ptitLu} 🪵`;
     }
     
-    if (buyManualWorker) {
-        buyManualWorker.disabled = gameState.wood < prices.manualWorker;
-        buyManualWorker.textContent = `👷 Bûcheron manuel - ${prices.manualWorker} 🪵`;
+    if (buyMathieu) {
+        buyMathieu.disabled = gameState.wood < prices.mathieu;
+        buyMathieu.textContent = `😐 Mathieu (moyen) - ${prices.mathieu} 🪵`;
     }
     
-    if (buyAxeWorker) {
-        buyAxeWorker.disabled = gameState.wood < prices.axeWorker || !gameState.tools.axe;
-        buyAxeWorker.textContent = `🪓👷 Bûcheron hache - ${prices.axeWorker} 🪵`;
-    }
-    
-    if (buyChainsawWorker) {
-        buyChainsawWorker.disabled = gameState.wood < prices.chainsawWorker || !gameState.tools.chainsaw;
-        buyChainsawWorker.textContent = `🔧👷 Bûcheron tronçonneuse - ${prices.chainsawWorker} 🪵`;
+    if (buyVico) {
+        buyVico.disabled = gameState.wood < prices.vico;
+        buyVico.textContent = `💪 Vico (fort) - ${prices.vico} 🪵`;
     }
     
     if (buyBeer) {
@@ -256,13 +283,13 @@ function updateShopButtons() {
 }
 
 function updateWorkerCounts() {
-    const manualWorkerCount = document.getElementById('manualWorkerCount');
-    const axeWorkerCount = document.getElementById('axeWorkerCount');
-    const chainsawWorkerCount = document.getElementById('chainsawWorkerCount');
+    const ptitLuCount = document.getElementById('ptitLuCount');
+    const mathieuCount = document.getElementById('mathieuCount');
+    const vicoCount = document.getElementById('vicoCount');
     
-    if (manualWorkerCount) manualWorkerCount.textContent = gameState.workers.manual;
-    if (axeWorkerCount) axeWorkerCount.textContent = gameState.workers.axe;
-    if (chainsawWorkerCount) chainsawWorkerCount.textContent = gameState.workers.chainsaw;
+    if (ptitLuCount) ptitLuCount.textContent = gameState.workers.ptitLu;
+    if (mathieuCount) mathieuCount.textContent = gameState.workers.mathieu;
+    if (vicoCount) vicoCount.textContent = gameState.workers.vico;
 }
 
 function updateStats() {
@@ -333,7 +360,7 @@ function showFloatingText(text, color) {
 }
 
 function workerChop(workerType) {
-    const damage = toolEfficiency[workerType] * gameState.workers[workerType];
+    const damage = workerEfficiency[workerType] * gameState.workers[workerType];
     gameState.treeHP -= damage;
     
     if (Math.random() < 0.3) {
@@ -390,20 +417,17 @@ function bindEvents() {
         console.error('Could not find main tree element!');
     }
     
-    const buyAxe = document.getElementById('buyAxe');
-    if (buyAxe) buyAxe.addEventListener('click', () => buyTool('axe'));
+    const upgradeAxeBtn = document.getElementById('upgradeAxe');
+    if (upgradeAxeBtn) upgradeAxeBtn.addEventListener('click', () => upgradeAxe());
     
-    const buyChainsaw = document.getElementById('buyChainsaw');
-    if (buyChainsaw) buyChainsaw.addEventListener('click', () => buyTool('chainsaw'));
+    const buyPtitLuBtn = document.getElementById('buyPtitLu');
+    if (buyPtitLuBtn) buyPtitLuBtn.addEventListener('click', () => buyWorker('ptitLu'));
     
-    const buyManualWorker = document.getElementById('buyManualWorker');
-    if (buyManualWorker) buyManualWorker.addEventListener('click', () => buyWorker('manual'));
+    const buyMathieuBtn = document.getElementById('buyMathieu');
+    if (buyMathieuBtn) buyMathieuBtn.addEventListener('click', () => buyWorker('mathieu'));
     
-    const buyAxeWorker = document.getElementById('buyAxeWorker');
-    if (buyAxeWorker) buyAxeWorker.addEventListener('click', () => buyWorker('axe'));
-    
-    const buyChainsawWorker = document.getElementById('buyChainsawWorker');
-    if (buyChainsawWorker) buyChainsawWorker.addEventListener('click', () => buyWorker('chainsaw'));
+    const buyVicoBtn = document.getElementById('buyVico');
+    if (buyVicoBtn) buyVicoBtn.addEventListener('click', () => buyWorker('vico'));
     
     const buyBeerBtn = document.getElementById('buyBeer');
     if (buyBeerBtn) buyBeerBtn.addEventListener('click', () => purchaseBeer());
@@ -416,6 +440,8 @@ function initGame() {
     updateUI();
     startWorkerLoop();
     respawnTree();
+    
+    setInterval(updateSpeedDisplays, 500);
     
     console.log('Game initialized!');
 }
@@ -499,21 +525,25 @@ function restartGame() {
     gameState = {
         wood: 0,
         beer: 0,
-        tools: {
-            axe: 0,
-            chainsaw: 0
-        },
+        currentTool: 'manual',
+        treeHP: 10,
+        maxTreeHP: 10,
+        axeLevel: 1,
         workers: {
-            manual: 0,
-            axe: 0,
-            chainsaw: 0
+            ptitLu: 0,
+            mathieu: 0,
+            vico: 0
         },
         stats: {
-            totalTrees: 0,
-            totalWood: 0,
-            totalBeers: 0,
+            totalTreesChopped: 0,
+            totalWoodGained: 0,
+            totalBeersConsumed: 0,
             totalClicks: 0,
-            workersHired: 0
+            workersHired: 0,
+            lastClickTime: Date.now(),
+            clicksInLastSecond: 0,
+            recentClicks: [],
+            woodPerSecond: 0
         },
         playerName: playerName,
         gameStartTime: Date.now()
@@ -522,8 +552,8 @@ function restartGame() {
     document.querySelector('.modal-overlay:last-child').remove();
     document.querySelector('.game-container').style.display = 'flex';
     
-    updateDisplay();
+    updateUI();
     updateStats();
-    currentTree.hp = 10;
+    respawnTree();
     updateTreeHP();
 } 
