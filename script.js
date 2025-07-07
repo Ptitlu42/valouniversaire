@@ -79,7 +79,12 @@ function calculatePrice(basePrice, quantity, type = 'worker') {
     if (type === 'beer') {
         return Math.floor(basePrice * Math.pow(DIFFICULTY_CONFIG.priceMultipliers.beer, quantity));
     }
-    return Math.floor(basePrice * Math.pow(DIFFICULTY_CONFIG.priceMultipliers.worker, quantity));
+    
+    if (DIFFICULTY_CONFIG.priceMultipliers[type]) {
+        return Math.floor(basePrice * Math.pow(DIFFICULTY_CONFIG.priceMultipliers[type], quantity));
+    }
+    
+    return basePrice;
 }
 
 function getCurrentPrices() {
@@ -87,9 +92,9 @@ function getCurrentPrices() {
     
     return {
         axeUpgrade: calculatePrice(DIFFICULTY_CONFIG.prices.axeUpgrade, gameState.axeLevel, 'upgrade'),
-        ptitLu: calculatePrice(DIFFICULTY_CONFIG.prices.ptitLu, gameState.workers.ptitLu, 'worker'),
-        mathieu: calculatePrice(DIFFICULTY_CONFIG.prices.mathieu, gameState.workers.mathieu, 'worker'),
-        vico: calculatePrice(DIFFICULTY_CONFIG.prices.vico, gameState.workers.vico, 'worker'),
+        ptitLu: calculatePrice(DIFFICULTY_CONFIG.prices.ptitLu, gameState.workers.ptitLu, 'ptitLu'),
+        mathieu: calculatePrice(DIFFICULTY_CONFIG.prices.mathieu, gameState.workers.mathieu, 'mathieu'),
+        vico: calculatePrice(DIFFICULTY_CONFIG.prices.vico, gameState.workers.vico, 'vico'),
         beer: calculatePrice(DIFFICULTY_CONFIG.prices.beer, gameState.beer, 'beer')
     };
 }
@@ -288,7 +293,11 @@ function harvestTree() {
     gameState.stats.totalTreesChopped++;
     gameState.stats.totalWoodGained += woodGained;
     trackWoodGain(woodGained);
-    showFloatingText(`+${woodGained} 🪵`, '#66bb6a');
+    
+    if (gameState.beer < DIFFICULTY_CONFIG.beer.targetBeers) {
+        showFloatingText(`+${woodGained} 🪵`, '#66bb6a');
+    }
+    
     respawnTree();
     updateUI();
 }
@@ -348,11 +357,11 @@ function showUpgradeAnimation(text, color = '#ffd93d') {
     let maxWidth = 'none';
     
     if (isSmallMobile) {
-        fontSize = '1.2rem';
+        fontSize = '2rem';
         whiteSpace = 'normal';
         maxWidth = '85vw';
     } else if (isMobile) {
-        fontSize = '1.6rem';
+        fontSize = '2.5rem';
         whiteSpace = 'normal';
         maxWidth = '90vw';
     }
@@ -1247,7 +1256,7 @@ function checkTutorialTriggers() {
         showTutorialStep('beer');
     } else if (gameState.wood >= 15 && !gameState.tutorial.shownSteps.axe) {
         showTutorialStep('axe');
-    } else if (gameState.wood >= 25 && !gameState.tutorial.shownSteps.workers) {
+    } else if (gameState.wood >= 35 && !gameState.tutorial.shownSteps.workers) {
         showTutorialStep('workers');
     }
 }
