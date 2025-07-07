@@ -294,13 +294,79 @@ function updateTreeHP() {
     }
 }
 
+function showFloatingText(text, color = '#ffd93d') {
+    const container = document.querySelector('.main-tree-container');
+    if (!container) return;
+    
+    const element = document.createElement('div');
+    element.textContent = text;
+    element.style.cssText = `
+        position: absolute;
+        color: ${color};
+        font-weight: bold;
+        font-size: 1.8rem;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        pointer-events: none;
+        z-index: 1000;
+        animation: floatUp 1.5s ease-out forwards;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    `;
+
+    container.appendChild(element);
+    
+    setTimeout(() => {
+        if (element.parentNode) {
+            element.parentNode.removeChild(element);
+        }
+    }, 1500);
+}
+
+function showUpgradeAnimation(text, color = '#ffd93d') {
+    const upgradeText = document.createElement('div');
+    upgradeText.textContent = text;
+    upgradeText.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: ${color};
+        font-weight: bold;
+        font-size: 3rem;
+        text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+        pointer-events: none;
+        z-index: 2000;
+        animation: upgradePopup 2.5s ease-out forwards;
+        text-align: center;
+        white-space: nowrap;
+    `;
+    
+    document.body.appendChild(upgradeText);
+    
+    setTimeout(() => {
+        if (upgradeText.parentNode) {
+            upgradeText.parentNode.removeChild(upgradeText);
+        }
+    }, 2500);
+}
+
 function upgradeAxe() {
     const prices = getCurrentPrices();
     if (gameState.wood >= prices.axeUpgrade) {
         gameState.wood -= prices.axeUpgrade;
         gameState.axeLevel++;
         updateUI();
-        showFloatingText(`🪓 Hache niveau ${gameState.axeLevel} !`, '#ffd93d');
+        
+        const upgradeMessages = [
+            '🪓 Hache améliorée ! Tu deviens un vrai bûcheron !',
+            '🪓 Nouvelle hache ! Les arbres tremblent !',
+            '🪓 Upgrade réussi ! Tu es de plus en plus fort !',
+            '🪓 Hache de légende ! Vico serait fier !',
+            '🪓 Niveau supérieur ! Tu maîtrises maintenant !'
+        ];
+        const randomMessage = upgradeMessages[Math.floor(Math.random() * upgradeMessages.length)];
+        showUpgradeAnimation(randomMessage, '#ffd93d');
     }
 }
 
@@ -316,12 +382,12 @@ function buyWorker(workerType) {
         createWorkerInterval(workerType);
         
         updateUI();
-        const names = {
-            ptitLu: 'Ptit Lu',
-            mathieu: 'Mathieu', 
-            vico: 'Vico'
+        const messages = {
+            ptitLu: ' +1 PtitLu ! (Il va faire de son mieux... 😅)',
+            mathieu: 'Un Mathieu rejoint l\'équipe ! (Solide recrue 👍)', 
+            vico: 'UN VICO DE PLUS ! (Attention les arbres, la légende arrive! 🔥)'
         };
-        showFloatingText(`${names[workerType]} embauché !`, '#ffd93d');
+        showUpgradeAnimation(messages[workerType], '#ffd93d');
     }
 }
 
@@ -334,12 +400,19 @@ function purchaseBeer() {
         
         showAperitifAnimation();
         updateUI();
-        showFloatingText('🍺 Bière achetée !', '#ffd93d');
+        
+        const beerMessages = [
+            '🍺 Une de plus pour Valou !',
+            '🍺 Valou approuve ce choix !',
+            '🍺 Encore une petite mousse !',
+            '🍺 Valou est de plus en plus content !',
+            '🍺 La soif de Valou n\'a pas de limite !'
+        ];
+        const randomMessage = beerMessages[Math.floor(Math.random() * beerMessages.length)];
+        showFloatingText(randomMessage, '#ffd93d');
         
         if (gameState.beer >= DIFFICULTY_CONFIG.beer.targetBeers) {
-            setTimeout(() => {
-                showEndScreen();
-            }, 2500);
+            showEndScreen();
         }
     }
 }
@@ -367,29 +440,29 @@ function updateShopButtons() {
 
     if (upgradeAxe) {
         upgradeAxe.disabled = gameState.wood < prices.axeUpgrade;
-        upgradeAxe.textContent = `🪓 Améliorer ma hache (niv.${gameState.axeLevel}) - ${prices.axeUpgrade} 🪵`;
+        upgradeAxe.textContent = `🪓 Améliorer ta hache (niv.${gameState.axeLevel}) - ${prices.axeUpgrade} 🪵`;
     }
     
     if (buyPtitLu) {
         buyPtitLu.disabled = gameState.wood < prices.ptitLu;
-        buyPtitLu.textContent = `😴 Ptit Lu (nul) - ${prices.ptitLu} 🪵`;
+        buyPtitLu.textContent = `😴 PtitLu (...pas oof) - ${prices.ptitLu} 🪵`;
     }
     
     if (buyMathieu) {
         buyMathieu.disabled = gameState.wood < prices.mathieu;
-        buyMathieu.textContent = `😐 Mathieu (moyen) - ${prices.mathieu} 🪵`;
+        buyMathieu.textContent = `😊 Mathieu (Du bon bucheron ça!) - ${prices.mathieu} 🪵`;
     }
     
     if (buyVico) {
         buyVico.disabled = gameState.wood < prices.vico;
-        buyVico.textContent = `💪 Vico (fort) - ${prices.vico} 🪵`;
+        buyVico.textContent = `💪 Vico (la machine absolue!) - ${prices.vico} 🪵`;
     }
     
     if (buyBeer) {
         buyBeer.disabled = gameState.wood < prices.beer;
         const currentBonus = gameState.beer;
         const nextBonus = gameState.beer + 1;
-        buyBeer.textContent = `🍺 Bière (+${nextBonus}% bois) - ${prices.beer} 🪵`;
+        buyBeer.textContent = `🍺 Bière pour Valou (+${nextBonus}% bois) - ${prices.beer} 🪵`;
     }
 }
 
@@ -439,35 +512,6 @@ function updateValouHappiness() {
             valouFace.textContent = '😐';
         }
     }
-}
-
-function showFloatingText(text, color) {
-    const container = document.querySelector('.main-tree-container');
-    if (!container) return;
-    
-    const element = document.createElement('div');
-    element.textContent = text;
-    element.style.cssText = `
-        position: absolute;
-        color: ${color};
-        font-weight: bold;
-        font-size: 1.8rem;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-        pointer-events: none;
-        z-index: 1000;
-        animation: floatUp 1.5s ease-out forwards;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-    `;
-
-    container.appendChild(element);
-
-    setTimeout(() => {
-        if (element.parentNode) {
-            element.parentNode.removeChild(element);
-        }
-    }, 1500);
 }
 
 function workerChop(workerType) {
@@ -619,22 +663,344 @@ function showEndScreen() {
     const seconds = Math.floor((elapsed % 60000) / 1000);
     const timeText = `${minutes}:${seconds.toString().padStart(2, '0')}`;
     
+    const woodPerMinute = elapsed > 0 ? Math.round((gameState.stats.totalWoodGained / elapsed) * 60000) : 0;
+    
     document.querySelector('.game-container').style.display = 'none';
     
     const endModal = document.createElement('div');
     endModal.className = 'modal-overlay';
     endModal.innerHTML = `
         <div class="modal end-screen">
-            <h1>C'est la valoute !</h1>
-            <p>🎉 Félicitations ${gameState.playerName} ! 🎉<br>
-            Tu as réussi à faire boire 420 bières à Valou !<br><br>
-            🎯 Mission accomplie en ${timeText} ! 🎯</p>
-            <div class="time">⏱️ Temps de jeu : ${timeText}</div>
-            <button onclick="restartGame()">RECOMMENCER L'AVENTURE !</button>
+            <h2>🎉 GG mon reuf ! 🎉</h2>
+            <p>Tu as réussi à faire boire Valou comme un chef ! 🍺</p>
+            <p class="beer-emoji">🍺</p>
+            <p><strong>C'est la valoute !</strong></p>
+            
+            <div class="stats-table">
+                <h3>📊 Ton tableau de bord de BG</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">⏱️</div>
+                        <div class="stat-value">${minutes}m ${seconds}s</div>
+                        <div class="stat-label">Temps de jeu</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🌳</div>
+                        <div class="stat-value">${gameState.stats.totalTreesChopped}</div>
+                        <div class="stat-label">Arbres massacrés</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🪵</div>
+                        <div class="stat-value">${gameState.stats.totalWoodGained}</div>
+                        <div class="stat-label">Bois récupéré</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🍺</div>
+                        <div class="stat-value">${gameState.stats.totalBeersConsumed}</div>
+                        <div class="stat-label">Bières pour Valou</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">👆</div>
+                        <div class="stat-value">${gameState.stats.totalClicks}</div>
+                        <div class="stat-label">Clics de warrior</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-value">${gameState.stats.workersHired}</div>
+                        <div class="stat-label">Potes embauchés</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🪓</div>
+                        <div class="stat-value">${gameState.axeLevel}</div>
+                        <div class="stat-label">Niveau de hache</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⚡</div>
+                        <div class="stat-value">${woodPerMinute}</div>
+                        <div class="stat-label">Bois/min (efficacité)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🏆</div>
+                        <div class="stat-value">${gameState.beer >= 420 ? 'LÉGENDE' : 'CHAMPION'}</div>
+                        <div class="stat-label">Statut final</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="social-share">
+                <div class="share-buttons">
+                    <button class="share-btn-main" onclick="shareResults()">Partager mon score !</button>
+                    <button class="restart-btn" onclick="restartGame()">Recommencer une partie</button>
+                </div>
+            </div>
         </div>
     `;
     
     document.body.appendChild(endModal);
+}
+
+function shareResults() {
+    const statsTable = document.querySelector('.stats-table');
+    if (!statsTable) {
+        console.error('Stats table not found');
+        return;
+    }
+    
+    console.log('Capturing stats table...');
+    captureStatsTable(statsTable).then(blob => {
+        console.log('Image captured, attempting to share...');
+        
+        if (navigator.share) {
+            const file = new File([blob], 'valouniversaire-stats.png', { type: 'image/png' });
+            
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                navigator.share({
+                    title: 'Mon score Valouniversaire !',
+                    text: '🎉 J\'ai terminé le Valouniversaire ! 🍺',
+                    files: [file]
+                }).then(() => {
+                    console.log('Partage réussi !');
+                }).catch((error) => {
+                    console.log('Erreur lors du partage fichier:', error);
+                    shareImageAsDataUrl(blob);
+                });
+            } else {
+                shareImageAsDataUrl(blob);
+            }
+        } else {
+            console.log('API de partage non disponible');
+            shareImageAsDataUrl(blob);
+        }
+    }).catch(error => {
+        console.error('Erreur lors de la capture:', error);
+        fallbackTextShare();
+    });
+}
+
+function shareImageAsDataUrl(blob) {
+    const reader = new FileReader();
+    reader.onload = function() {
+        const dataUrl = reader.result;
+        
+        if (navigator.share) {
+            navigator.share({
+                title: 'Mon score Valouniversaire !',
+                text: '🎉 J\'ai terminé le Valouniversaire ! 🍺',
+                url: dataUrl
+            }).then(() => {
+                console.log('Partage URL réussi !');
+            }).catch((error) => {
+                console.log('Erreur partage URL:', error);
+                copyImageToClipboard(blob);
+            });
+        } else {
+            copyImageToClipboard(blob);
+        }
+    };
+    reader.readAsDataURL(blob);
+}
+
+function copyImageToClipboard(blob) {
+    if (navigator.clipboard && window.ClipboardItem) {
+        const item = new ClipboardItem({ 'image/png': blob });
+        navigator.clipboard.write([item]).then(() => {
+            alert('🎉 Image copiée ! Colle-la dans ton app de partage !');
+        }).catch(() => {
+            downloadImage(blob);
+        });
+    } else {
+        downloadImage(blob);
+    }
+}
+
+function captureStatsTable(element) {
+    return new Promise((resolve, reject) => {
+        try {
+            // Get all stats cards with their actual content
+            const statsCards = element.querySelectorAll('.stat-card');
+            console.log('Found', statsCards.length, 'stat cards');
+            
+            if (statsCards.length === 0) {
+                reject(new Error('No stat cards found'));
+                return;
+            }
+            
+            // Create canvas
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Set canvas size - INCREASED SIZE
+            const padding = 50;
+            const cardWidth = 220;
+            const cardHeight = 140;
+            const cardsPerRow = 3;
+            const rows = Math.ceil(statsCards.length / cardsPerRow);
+            
+            canvas.width = cardsPerRow * cardWidth + (cardsPerRow + 1) * 40;
+            canvas.height = 140 + rows * cardHeight + (rows + 1) * 40;
+            
+            // Fill background
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, '#2d4a2d');
+            gradient.addColorStop(1, '#1a3a1a');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw border
+            ctx.strokeStyle = '#ffd93d';
+            ctx.lineWidth = 4;
+            drawRoundRect(ctx, 10, 10, canvas.width - 20, canvas.height - 20, 15);
+            ctx.stroke();
+            
+            // Draw title
+            ctx.fillStyle = '#ffd93d';
+            ctx.font = 'bold 28px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('📊 Tableau de bord final', canvas.width / 2, 60);
+            
+            // Draw each stat card
+            statsCards.forEach((card, index) => {
+                const row = Math.floor(index / cardsPerRow);
+                const col = index % cardsPerRow;
+                const x = 40 + col * (cardWidth + 40);
+                const y = 110 + row * (cardHeight + 40);
+                
+                // Get card content
+                const iconElement = card.querySelector('.stat-icon');
+                const valueElement = card.querySelector('.stat-value');
+                const labelElement = card.querySelector('.stat-label');
+                
+                if (!iconElement || !valueElement || !labelElement) {
+                    console.warn('Missing elements in card', index);
+                    return;
+                }
+                
+                const icon = iconElement.textContent;
+                const value = valueElement.textContent;
+                const label = labelElement.textContent;
+                
+                console.log(`Card ${index}: ${icon} ${value} ${label}`);
+                
+                // Draw card background
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                drawRoundRect(ctx, x, y, cardWidth, cardHeight, 12);
+                ctx.fill();
+                
+                // Draw card border
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 2;
+                drawRoundRect(ctx, x, y, cardWidth, cardHeight, 12);
+                ctx.stroke();
+                
+                // Draw icon
+                ctx.font = '32px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#fff';
+                ctx.fillText(icon, x + cardWidth/2, y + 45);
+                
+                // Draw value
+                ctx.font = 'bold 22px Arial';
+                ctx.fillStyle = '#ffd93d';
+                ctx.fillText(value, x + cardWidth/2, y + 80);
+                
+                // Draw label
+                ctx.font = '14px Arial';
+                ctx.fillStyle = '#ccc';
+                ctx.fillText(label.toUpperCase(), x + cardWidth/2, y + 105);
+            });
+            
+            // Add watermark
+            ctx.font = '18px Arial';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.textAlign = 'center';
+            ctx.fillText('#Valouniversaire', canvas.width / 2, canvas.height - 25);
+            
+            // Convert to blob
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    console.log('Canvas converted to blob successfully');
+                    resolve(blob);
+                } else {
+                    reject(new Error('Failed to convert canvas to blob'));
+                }
+            }, 'image/png', 0.9);
+            
+        } catch (error) {
+            console.error('Error in captureStatsTable:', error);
+            reject(error);
+        }
+    });
+}
+
+function drawRoundRect(ctx, x, y, width, height, radius) {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+}
+
+function downloadImage(blob) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'valouniversaire-stats.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    alert('🎉 Ton tableau de stats a été téléchargé ! Partage-le où tu veux !');
+}
+
+function fallbackTextShare() {
+    const elapsed = Date.now() - gameState.gameStartTime;
+    const minutes = Math.floor(elapsed / 60000);
+    const seconds = Math.floor((elapsed % 60000) / 1000);
+    const timeText = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    
+    const totalDamageDealt = gameState.stats.totalClicks * gameState.axeLevel + 
+        (gameState.workers.ptitLu * 0.5 + gameState.workers.mathieu * 2 + gameState.workers.vico * 5) * (elapsed / 1000);
+    
+    const shareText = `🎉 J'ai terminé le Valouniversaire ! 🎉\n🍺 420 bières pour Valou en ${timeText} !\n🌳 ${gameState.stats.totalTreesChopped} arbres coupés\n🪵 ${gameState.stats.totalWoodGained} bois récoltés\n👆 ${gameState.stats.totalClicks} clics\n👷 ${gameState.stats.workersHired} workers embauchés\n⚔️ ${Math.floor(totalDamageDealt)} dégâts infligés\n\n#Valouniversaire #Achievement`;
+    
+    fallbackShare(shareText);
+}
+
+function fallbackShare(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+            alert('🎉 Ton score a été copié ! Colle-le où tu veux pour le partager !');
+        }).catch(() => {
+            promptFallback(text);
+        });
+    } else {
+        promptFallback(text);
+    }
+}
+
+function promptFallback(text) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.opacity = '0';
+    document.body.appendChild(textArea);
+    textArea.select();
+    
+    try {
+        document.execCommand('copy');
+        alert('🎉 Ton score a été copié ! Colle-le où tu veux pour le partager !');
+    } catch (err) {
+        prompt('📋 Copie ce texte pour partager ton score :', text);
+    }
+    
+    document.body.removeChild(textArea);
 }
 
 function restartGame() {
