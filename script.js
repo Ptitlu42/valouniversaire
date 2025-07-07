@@ -1,16 +1,55 @@
 console.log('Script loading...');
 
+const DIFFICULTY_CONFIG = {
+    prices: {
+        axeUpgrade: 15,
+        ptitLu: 25,
+        mathieu: 100,
+        vico: 300,
+        beer: 4
+    },
+    priceMultipliers: {
+        upgrade: 1.2,
+        worker: 1.025,
+        beer: 1.025
+    },
+    toolEfficiency: {
+        manual: 1
+    },
+    workerEfficiency: {
+        ptitLu: 0.5,
+        mathieu: 2,
+        vico: 5
+    },
+    workerSpeed: {
+        ptitLu: 1200,
+        mathieu: 600,
+        vico: 400
+    },
+    tree: {
+        baseHP: 10,
+        minHP: 5,
+        maxHP: 12,
+        woodMin: 2,
+        woodMax: 4
+    },
+    beer: {
+        bonusPerBeer: 0.01,
+        targetBeers: 420
+    }
+};
+
 let gameState = {
     wood: 0,
-    beer: 0,
+    beer: 419,
     currentTool: 'manual',
     treeHP: 10,
     maxTreeHP: 10,
     axeLevel: 1,
     workers: {
-        ptitLu: 0,
-        mathieu: 0,
-        vico: 0
+        ptitLu: 400,
+        mathieu: 400,
+        vico: 400
     },
     stats: {
         totalTreesChopped: 0,
@@ -28,49 +67,31 @@ let gameState = {
     gameStartTime: null
 };
 
-const basePrices = {
-    axeUpgrade: 15,
-    ptitLu: 25,
-    mathieu: 100,
-    vico: 300,
-    beer: 4
-};
-
 function calculatePrice(basePrice, quantity, type = 'worker') {
     if (type === 'upgrade') {
-        return Math.floor(basePrice * Math.pow(1.5, quantity - 1));
+        return Math.floor(basePrice * Math.pow(DIFFICULTY_CONFIG.priceMultipliers.upgrade, quantity - 1));
     }
     if (type === 'beer') {
-        return Math.floor(basePrice * Math.pow(1.1, quantity));
+        return Math.floor(basePrice * Math.pow(DIFFICULTY_CONFIG.priceMultipliers.beer, quantity));
     }
-    return Math.floor(basePrice * Math.pow(1.15, quantity));
+    return Math.floor(basePrice * Math.pow(DIFFICULTY_CONFIG.priceMultipliers.worker, quantity));
 }
 
 function getCurrentPrices() {
     return {
-        axeUpgrade: calculatePrice(basePrices.axeUpgrade, gameState.axeLevel, 'upgrade'),
-        ptitLu: calculatePrice(basePrices.ptitLu, gameState.workers.ptitLu, 'worker'),
-        mathieu: calculatePrice(basePrices.mathieu, gameState.workers.mathieu, 'worker'),
-        vico: calculatePrice(basePrices.vico, gameState.workers.vico, 'worker'),
-        beer: calculatePrice(basePrices.beer, gameState.beer, 'beer')
+        axeUpgrade: calculatePrice(DIFFICULTY_CONFIG.prices.axeUpgrade, gameState.axeLevel, 'upgrade'),
+        ptitLu: calculatePrice(DIFFICULTY_CONFIG.prices.ptitLu, gameState.workers.ptitLu, 'worker'),
+        mathieu: calculatePrice(DIFFICULTY_CONFIG.prices.mathieu, gameState.workers.mathieu, 'worker'),
+        vico: calculatePrice(DIFFICULTY_CONFIG.prices.vico, gameState.workers.vico, 'worker'),
+        beer: calculatePrice(DIFFICULTY_CONFIG.prices.beer, gameState.beer, 'beer')
     };
 }
 
-const toolEfficiency = {
-    manual: 1
-};
+const toolEfficiency = DIFFICULTY_CONFIG.toolEfficiency;
 
-const workerEfficiency = {
-    ptitLu: 0.5,
-    mathieu: 2,
-    vico: 5
-};
+const workerEfficiency = DIFFICULTY_CONFIG.workerEfficiency;
 
-const workerSpeed = {
-    ptitLu: 1200,
-    mathieu: 600,
-    vico: 400
-};
+const workerSpeed = DIFFICULTY_CONFIG.workerSpeed;
 
 let workerIntervals = {};
 
@@ -116,7 +137,7 @@ function trackWoodGain(amount) {
     });
     
     gameState.stats.woodGainHistory = gameState.stats.woodGainHistory.filter(
-        entry => now - entry.timestamp < 10000
+        entry => now - entry.timestamp < 3000
     );
 }
 
@@ -126,11 +147,11 @@ function updateSpeedDisplays() {
     
     const clicksPerSecond = gameState.stats.recentClicks.length;
     
-    const woodInLast10Seconds = gameState.stats.woodGainHistory
-        .filter(entry => now - entry.timestamp < 10000)
+    const woodInLast3Seconds = gameState.stats.woodGainHistory
+        .filter(entry => now - entry.timestamp < 3000)
         .reduce((total, entry) => total + entry.amount, 0);
     
-    const actualWoodPerSecond = woodInLast10Seconds / 10;
+    const actualWoodPerSecond = woodInLast3Seconds / 3;
     
     const woodPerSecondElement = document.getElementById('woodPerSecond');
     const clicksPerSecondElement = document.getElementById('clicksPerSecond');
@@ -229,16 +250,27 @@ function chopTree() {
     
     createFallingParticles();
     showFloatingText(`-${damage}`, '#ff4757');
-    updateTreeHP();
-
-    if (gameState.treeHP <= 0) {
-        harvestTree();
-    }
+    
+    processTreeDamage();
     updateUI();
 }
 
+function processTreeDamage() {
+    while (gameState.treeHP <= 0) {
+        const excessDamage = Math.abs(gameState.treeHP);
+        harvestTree();
+        if (excessDamage > 0) {
+            gameState.treeHP -= excessDamage;
+        }
+    }
+    updateTreeHP();
+}
+
 function harvestTree() {
-    const woodGained = Math.floor(Math.random() * 3) + 2;
+    const baseWood = Math.floor(Math.random() * (DIFFICULTY_CONFIG.tree.woodMax - DIFFICULTY_CONFIG.tree.woodMin + 1)) + DIFFICULTY_CONFIG.tree.woodMin;
+    const beerBonus = 1 + (gameState.beer * DIFFICULTY_CONFIG.beer.bonusPerBeer);
+    const woodGained = Math.floor(baseWood * beerBonus);
+    
     gameState.wood += woodGained;
     gameState.stats.totalTreesChopped++;
     gameState.stats.totalWoodGained += woodGained;
@@ -249,7 +281,7 @@ function harvestTree() {
 }
 
 function respawnTree() {
-    gameState.maxTreeHP = Math.floor(Math.random() * 8) + 5;
+    gameState.maxTreeHP = Math.floor(Math.random() * (DIFFICULTY_CONFIG.tree.maxHP - DIFFICULTY_CONFIG.tree.minHP + 1)) + DIFFICULTY_CONFIG.tree.minHP;
     gameState.treeHP = gameState.maxTreeHP;
     updateTreeHP();
 }
@@ -280,6 +312,9 @@ function buyWorker(workerType) {
         gameState.wood -= price;
         gameState.workers[workerType]++;
         gameState.stats.workersHired++;
+        
+        createWorkerInterval(workerType);
+        
         updateUI();
         const names = {
             ptitLu: 'Ptit Lu',
@@ -301,7 +336,7 @@ function purchaseBeer() {
         updateUI();
         showFloatingText('🍺 Bière achetée !', '#ffd93d');
         
-        if (gameState.beer >= 420) {
+        if (gameState.beer >= DIFFICULTY_CONFIG.beer.targetBeers) {
             setTimeout(() => {
                 showEndScreen();
             }, 2500);
@@ -352,7 +387,9 @@ function updateShopButtons() {
     
     if (buyBeer) {
         buyBeer.disabled = gameState.wood < prices.beer;
-        buyBeer.textContent = `🍺 Bière - ${prices.beer} 🪵`;
+        const currentBonus = gameState.beer;
+        const nextBonus = gameState.beer + 1;
+        buyBeer.textContent = `🍺 Bière (+${nextBonus}% bois) - ${prices.beer} 🪵`;
     }
 }
 
@@ -381,16 +418,16 @@ function updateStats() {
 }
 
 function updateValouHappiness() {
-    const happinessPercentage = Math.min((gameState.beer / 420) * 100, 100);
+    const happinessPercentage = Math.min((gameState.beer / DIFFICULTY_CONFIG.beer.targetBeers) * 100, 100);
     const happinessFill = document.querySelector('.happiness-fill');
     const happinessText = document.querySelector('.happiness-text');
     
     if (happinessFill) happinessFill.style.width = `${happinessPercentage}%`;
-    if (happinessText) happinessText.textContent = `${gameState.beer}/420 🍺`;
+    if (happinessText) happinessText.textContent = `${gameState.beer}/${DIFFICULTY_CONFIG.beer.targetBeers} 🍺`;
     
     const valouFace = document.querySelector('.valou-face');
     if (valouFace) {
-        if (gameState.beer >= 420) {
+        if (gameState.beer >= DIFFICULTY_CONFIG.beer.targetBeers) {
             valouFace.textContent = '🤩';
         } else if (gameState.beer >= 200) {
             valouFace.textContent = '😍';
@@ -441,11 +478,8 @@ function workerChop(workerType) {
         createFallingParticles();
     }
     
-    updateTreeHP();
-
-    if (gameState.treeHP <= 0) {
-        harvestTree();
-    }
+    processTreeDamage();
+    updateUI();
 }
 
 function createWorkerInterval(workerType) {
@@ -453,11 +487,21 @@ function createWorkerInterval(workerType) {
         clearInterval(workerIntervals[workerType]);
     }
     
-    workerIntervals[workerType] = setInterval(() => {
-        if (gameState.workers[workerType] > 0) {
-            workerChop(workerType);
-        }
-    }, workerSpeed[workerType]);
+    if (gameState.workers[workerType] > 0) {
+        workerIntervals[workerType] = setInterval(() => {
+            if (gameState.workers[workerType] > 0) {
+                const totalDamage = workerEfficiency[workerType] * gameState.workers[workerType];
+                gameState.treeHP -= totalDamage;
+                
+                if (Math.random() < 0.3) {
+                    createFallingParticles();
+                }
+                
+                processTreeDamage();
+                updateUI();
+            }
+        }, workerSpeed[workerType]);
+    }
 }
 
 function startWorkerLoop() {
@@ -515,7 +559,8 @@ function initGame() {
     startWorkerLoop();
     respawnTree();
     
-    setInterval(updateSpeedDisplays, 500);
+    setInterval(updateSpeedDisplays, 1);
+    setInterval(updateUI, 50);
     
     console.log('Game initialized!');
 }
@@ -549,7 +594,6 @@ function startGame() {
     gameState.playerName = playerName;
     gameState.gameStartTime = Date.now();
     
-    document.getElementById('displayPlayerName').textContent = playerName;
     document.getElementById('welcomeModal').style.display = 'none';
     document.querySelector('.game-container').style.display = 'flex';
     
