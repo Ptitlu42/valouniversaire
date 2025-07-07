@@ -705,19 +705,21 @@ function showEndScreen() {
     
     const woodPerMinute = elapsed > 0 ? Math.round((gameState.stats.totalWoodGained / elapsed) * 60000) : 0;
     
+    saveGameResults(elapsed, woodPerMinute);
+    
     document.querySelector('.game-container').style.display = 'none';
     
     const endModal = document.createElement('div');
     endModal.className = 'modal-overlay';
     endModal.innerHTML = `
         <div class="modal end-screen">
-            <h2>C'EST LA VALOUTE</h2>
-            <p>Tu as réussi à finir le Valou ! 🍺</p>
+            <h2>🎉 GG mon reuf ! 🎉</h2>
+            <p>Tu as réussi à faire boire Valou comme un chef ! 🍺</p>
             <p class="beer-emoji">🍺</p>
-            <p><strong>GG</strong></p>
+            <p><strong>C'est la valoute !</strong></p>
             
             <div class="stats-table">
-                <h3>📊 Tes stats</h3>
+                <h3>📊 Ton tableau de bord de BG</h3>
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-icon">⏱️</div>
@@ -742,7 +744,7 @@ function showEndScreen() {
                     <div class="stat-card">
                         <div class="stat-icon">👆</div>
                         <div class="stat-value">${gameState.stats.totalClicks}</div>
-                        <div class="stat-label">Clics</div>
+                        <div class="stat-label">Clics de warrior</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon">👥</div>
@@ -777,6 +779,98 @@ function showEndScreen() {
     `;
     
     document.body.appendChild(endModal);
+}
+
+function saveGameResults(gameTimeMs, woodPerMinute) {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('fr-FR');
+    const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const uniquePlayerName = `${gameState.playerName}_${dateStr.replace(/\//g, '-')}_${timeStr.replace(/:/g, 'h')}`;
+    
+    const gameResult = {
+        playerInfo: {
+            originalName: gameState.playerName,
+            uniqueName: uniquePlayerName,
+            gameDate: now.toISOString(),
+            gameStartTime: new Date(gameState.gameStartTime).toISOString()
+        },
+        gameStats: {
+            totalGameTime: {
+                milliseconds: gameTimeMs,
+                minutes: Math.floor(gameTimeMs / 60000),
+                seconds: Math.floor((gameTimeMs % 60000) / 1000),
+                formatted: `${Math.floor(gameTimeMs / 60000)}:${Math.floor((gameTimeMs % 60000) / 1000).toString().padStart(2, '0')}`
+            },
+            resources: {
+                finalWood: gameState.wood,
+                finalBeers: gameState.beer,
+                totalWoodGained: gameState.stats.totalWoodGained,
+                totalBeersConsumed: gameState.stats.totalBeersConsumed,
+                woodPerMinute: woodPerMinute
+            },
+            actions: {
+                totalClicks: gameState.stats.totalClicks,
+                totalTreesChopped: gameState.stats.totalTreesChopped,
+                workersHired: gameState.stats.workersHired
+            },
+            upgrades: {
+                finalAxeLevel: gameState.axeLevel,
+                workers: {
+                    ptitLu: gameState.workers.ptitLu,
+                    mathieu: gameState.workers.mathieu,
+                    vico: gameState.workers.vico,
+                    totalWorkers: gameState.workers.ptitLu + gameState.workers.mathieu + gameState.workers.vico
+                }
+            },
+            efficiency: {
+                woodPerMinute: woodPerMinute,
+                clicksPerMinute: Math.round((gameState.stats.totalClicks / gameTimeMs) * 60000),
+                treesPerMinute: Math.round((gameState.stats.totalTreesChopped / gameTimeMs) * 60000),
+                beersPerMinute: Math.round((gameState.stats.totalBeersConsumed / gameTimeMs) * 60000),
+                averageWoodPerTree: gameState.stats.totalTreesChopped > 0 ? (gameState.stats.totalWoodGained / gameState.stats.totalTreesChopped).toFixed(2) : 0,
+                averageWoodPerClick: gameState.stats.totalClicks > 0 ? (gameState.stats.totalWoodGained / gameState.stats.totalClicks).toFixed(2) : 0
+            },
+            completion: {
+                targetReached: gameState.beer >= 420,
+                completionPercentage: Math.round((gameState.beer / 420) * 100),
+                finalStatus: gameState.beer >= 420 ? 'LÉGENDE' : 'CHAMPION'
+            },
+            tutorial: {
+                tutorialEnabled: gameState.tutorial.enabled,
+                tutorialStepsShown: gameState.tutorial.shownSteps
+            }
+        }
+    };
+    
+    downloadGameResult(gameResult, uniquePlayerName);
+}
+
+function downloadGameResult(gameResult, fileName) {
+    const jsonString = JSON.stringify(gameResult, null, 2);
+    
+    fetch('save_game_result.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            fileName: `valouniversaire_${fileName}.json`,
+            data: gameResult
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Résultats sauvegardés avec succès:', data.message);
+        } else {
+            console.error('Erreur lors de la sauvegarde:', data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur lors de l\'envoi:', error);
+    });
+    
+    console.log('Résultats préparés pour sauvegarde:', gameResult);
 }
 
 function shareResults() {
