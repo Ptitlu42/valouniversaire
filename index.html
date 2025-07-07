@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Valouniversaire Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <header class="header">
+            <h1>🎂 Valouniversaire Game 🎂</h1>
+            <div class="valou-happiness">
+                <span class="valou-face">😊</span>
+                <div class="happiness-bar">
+                    <div class="happiness-fill"></div>
+                </div>
+                <span class="happiness-text">0/420 🍺</span>
+            </div>
+        </header>
+
+        <main class="main-game">
+            <div class="forest-background"></div>
+            
+            <div class="main-tree-container">
+                <div class="main-tree" id="mainTree">🌲</div>
+                <div class="tree-hp-bar">
+                    <div class="tree-hp-fill"></div>
+                </div>
+            </div>
+        </main>
+
+        <div class="game-ui">
+            <div class="inventory">
+                <h3>📦 Inventaire</h3>
+                <div class="inventory-item">
+                    <span>🪵</span>
+                    <span id="woodCount">0</span>
+                </div>
+                <div class="inventory-item">
+                    <span>🍺</span>
+                    <span id="beerCount">0</span>
+                </div>
+            </div>
+
+            <div class="shop">
+                <h3>🛒 Boutique</h3>
+                <div class="shop-section">
+                    <h4>Outils</h4>
+                    <button class="shop-item" id="buyAxe" disabled>
+                        🪓 Hache - 10 🪵
+                    </button>
+                    <button class="shop-item" id="buyChainsaw" disabled>
+                        🔧 Tronçonneuse - 50 🪵
+                    </button>
+                </div>
+                
+                <div class="shop-section">
+                    <h4>Bûcherons</h4>
+                    <button class="shop-item" id="buyManualWorker" disabled>
+                        👷 Bûcheron Manuel - 25 🪵
+                    </button>
+                    <button class="shop-item" id="buyAxeWorker" disabled>
+                        🪓👷 Bûcheron Hache - 100 🪵
+                    </button>
+                    <button class="shop-item" id="buyChainsawWorker" disabled>
+                        🔧👷 Bûcheron Tronçonneuse - 300 🪵
+                    </button>
+                </div>
+                
+                <div class="shop-section">
+                    <button class="shop-item beer-shop" id="buyBeer" disabled>
+                        🍺 Bière - 4 🪵
+                    </button>
+                </div>
+            </div>
+
+            <div class="workers">
+                <h3>👷 Équipe</h3>
+                <div class="worker-list">
+                    <div class="worker-item">
+                        <span>👷 Manuel:</span>
+                        <span id="manualWorkerCount">0</span>
+                    </div>
+                    <div class="worker-item">
+                        <span>🪓👷 Hache:</span>
+                        <span id="axeWorkerCount">0</span>
+                    </div>
+                    <div class="worker-item">
+                        <span>🔧👷 Tronçonneuse:</span>
+                        <span id="chainsawWorkerCount">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="statistics">
+                <h3>📊 Statistiques</h3>
+                <div class="stat-item">
+                    <span>🌳 Arbres coupés:</span>
+                    <span id="totalTrees">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>🪵 Bois total:</span>
+                    <span id="totalWood">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>🍺 Bières bues:</span>
+                    <span id="totalBeers">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>👆 Clics totaux:</span>
+                    <span id="totalClicks">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>👷 Embauches:</span>
+                    <span id="workersHired">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 
