@@ -21,7 +21,8 @@ let gameState = {
         lastClickTime: Date.now(),
         clicksInLastSecond: 0,
         recentClicks: [],
-        woodPerSecond: 0
+        woodPerSecond: 0,
+        woodGainHistory: []
     },
     playerName: '',
     gameStartTime: null
@@ -107,18 +108,29 @@ function createFallingParticles() {
     }
 }
 
+function trackWoodGain(amount) {
+    const now = Date.now();
+    gameState.stats.woodGainHistory.push({
+        amount: amount,
+        timestamp: now
+    });
+    
+    gameState.stats.woodGainHistory = gameState.stats.woodGainHistory.filter(
+        entry => now - entry.timestamp < 10000
+    );
+}
+
 function updateSpeedDisplays() {
     const now = Date.now();
     gameState.stats.recentClicks = gameState.stats.recentClicks.filter(time => now - time < 1000);
     
     const clicksPerSecond = gameState.stats.recentClicks.length;
     
-    const totalWorkerWoodPerSecond = 
-        (gameState.workers.ptitLu * workerEfficiency.ptitLu * (1000 / workerSpeed.ptitLu)) +
-        (gameState.workers.mathieu * workerEfficiency.mathieu * (1000 / workerSpeed.mathieu)) +
-        (gameState.workers.vico * workerEfficiency.vico * (1000 / workerSpeed.vico));
+    const woodInLast10Seconds = gameState.stats.woodGainHistory
+        .filter(entry => now - entry.timestamp < 10000)
+        .reduce((total, entry) => total + entry.amount, 0);
     
-    const actualWoodPerSecond = totalWorkerWoodPerSecond * 2.5;
+    const actualWoodPerSecond = woodInLast10Seconds / 10;
     
     const woodPerSecondElement = document.getElementById('woodPerSecond');
     const clicksPerSecondElement = document.getElementById('clicksPerSecond');
@@ -230,6 +242,7 @@ function harvestTree() {
     gameState.wood += woodGained;
     gameState.stats.totalTreesChopped++;
     gameState.stats.totalWoodGained += woodGained;
+    trackWoodGain(woodGained);
     showFloatingText(`+${woodGained} 🪵`, '#66bb6a');
     respawnTree();
     updateUI();
@@ -421,9 +434,8 @@ function showFloatingText(text, color) {
 }
 
 function workerChop(workerType) {
-    const damage = workerEfficiency[workerType] * gameState.workers[workerType];
+    const damage = workerEfficiency[workerType];
     gameState.treeHP -= damage;
-    gameState.stats.totalWoodGained += Math.floor(damage * 0.3);
     
     if (Math.random() < 0.3) {
         createFallingParticles();
@@ -605,7 +617,8 @@ function restartGame() {
             lastClickTime: Date.now(),
             clicksInLastSecond: 0,
             recentClicks: [],
-            woodPerSecond: 0
+            woodPerSecond: 0,
+            woodGainHistory: []
         },
         playerName: playerName,
         gameStartTime: Date.now()
