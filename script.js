@@ -1,43 +1,37 @@
 console.log('Script loading...');
 
-const DIFFICULTY_CONFIG = {
-    prices: {
-        axeUpgrade: 15,
-        ptitLu: 25,
-        mathieu: 100,
-        vico: 300,
-        beer: 4
-    },
-    priceMultipliers: {
-        upgrade: 1.15,
-        worker: 1.018,
-        beer: 1.022
-    },
-    toolEfficiency: {
-        manual: 1
-    },
-    workerEfficiency: {
-        ptitLu: 0.5,
-        mathieu: 2,
-        vico: 5
-    },
-    workerSpeed: {
-        ptitLu: 1200,
-        mathieu: 600,
-        vico: 400
-    },
-    tree: {
-        baseHP: 10,
-        minHP: 5,
-        maxHP: 12,
-        woodMin: 2,
-        woodMax: 4
-    },
-    beer: {
-        bonusPerBeer: 0.01,
-        targetBeers: 420
+let DIFFICULTY_CONFIG = null;
+
+let toolEfficiency = null;
+
+let workerEfficiency = null;
+
+let workerSpeed = null;
+
+async function loadGameConfig() {
+    try {
+        const response = await fetch('get_config.php');
+        const data = await response.json();
+        
+        if (data.success) {
+            DIFFICULTY_CONFIG = data.config;
+            console.log('Configuration loaded successfully');
+            
+            // Initialize efficiency variables
+            toolEfficiency = DIFFICULTY_CONFIG.toolEfficiency;
+            workerEfficiency = DIFFICULTY_CONFIG.workerEfficiency;
+            workerSpeed = DIFFICULTY_CONFIG.workerSpeed;
+            
+            return true;
+        } else {
+            console.error('Failed to load configuration:', data.message);
+            return false;
+        }
+    } catch (error) {
+        console.error('Error loading configuration:', error);
+        return false;
     }
-};
+}
 
 let gameState = {
     wood: 0,
@@ -77,6 +71,8 @@ let gameState = {
 };
 
 function calculatePrice(basePrice, quantity, type = 'worker') {
+    if (!DIFFICULTY_CONFIG) return basePrice;
+    
     if (type === 'upgrade') {
         return Math.floor(basePrice * Math.pow(DIFFICULTY_CONFIG.priceMultipliers.upgrade, quantity - 1));
     }
@@ -87,6 +83,8 @@ function calculatePrice(basePrice, quantity, type = 'worker') {
 }
 
 function getCurrentPrices() {
+    if (!DIFFICULTY_CONFIG) return {};
+    
     return {
         axeUpgrade: calculatePrice(DIFFICULTY_CONFIG.prices.axeUpgrade, gameState.axeLevel, 'upgrade'),
         ptitLu: calculatePrice(DIFFICULTY_CONFIG.prices.ptitLu, gameState.workers.ptitLu, 'worker'),
@@ -95,12 +93,6 @@ function getCurrentPrices() {
         beer: calculatePrice(DIFFICULTY_CONFIG.prices.beer, gameState.beer, 'beer')
     };
 }
-
-const toolEfficiency = DIFFICULTY_CONFIG.toolEfficiency;
-
-const workerEfficiency = DIFFICULTY_CONFIG.workerEfficiency;
-
-const workerSpeed = DIFFICULTY_CONFIG.workerSpeed;
 
 let workerIntervals = {};
 
@@ -628,8 +620,15 @@ function bindEvents() {
     if (buyBeerBtn) buyBeerBtn.addEventListener('click', () => purchaseBeer());
 }
 
-function initGame() {
+async function initGame() {
     console.log('Initializing game...');
+    
+    const configLoaded = await loadGameConfig();
+    if (!configLoaded) {
+        console.error('Failed to load game configuration');
+        alert('Error while loading game configuration');
+        return;
+    }
     
     bindEvents();
     updateUI();
@@ -642,9 +641,9 @@ function initGame() {
     console.log('Game initialized!');
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     console.log('DOM loaded, starting game...');
-    initGame();
+    await initGame();
 });
 
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
@@ -759,7 +758,7 @@ function showEndScreen() {
                     <div class="stat-card">
                         <div class="stat-icon">⚡</div>
                         <div class="stat-value">${woodPerMinute}</div>
-                        <div class="stat-label">Bois/min (efficacité)</div>
+                        <div class="stat-label">Bois/min</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon">🏆</div>
