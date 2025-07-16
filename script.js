@@ -1,12 +1,12 @@
 console.log('Script loading...');
 
 let DIFFICULTY_CONFIG = null;
-
 let toolEfficiency = null;
-
 let workerEfficiency = null;
-
 let workerSpeed = null;
+let achievements = null;
+let prestigeConfig = null;
+let autoUpgrades = null;
 
 async function loadGameConfig() {
     try {
@@ -17,10 +17,12 @@ async function loadGameConfig() {
             DIFFICULTY_CONFIG = data.config;
             console.log('Configuration loaded successfully');
             
-            // Initialize efficiency variables
             toolEfficiency = DIFFICULTY_CONFIG.toolEfficiency;
             workerEfficiency = DIFFICULTY_CONFIG.workerEfficiency;
             workerSpeed = DIFFICULTY_CONFIG.workerSpeed;
+            achievements = DIFFICULTY_CONFIG.achievements;
+            prestigeConfig = DIFFICULTY_CONFIG.prestige;
+            autoUpgrades = DIFFICULTY_CONFIG.autoUpgrades;
             
             return true;
         } else {
@@ -36,6 +38,7 @@ async function loadGameConfig() {
 let gameState = {
     wood: 0,
     beer: 0,
+    prestigePoints: 0,
     currentTool: 'manual',
     treeHP: 10,
     maxTreeHP: 10,
@@ -44,6 +47,12 @@ let gameState = {
         ptitLu: 0,
         mathieu: 0,
         vico: 0
+    },
+    upgrades: {
+        autoClicker: 0,
+        lumberjackSchool: 0,
+        breweryBonus: 0,
+        goldenAxe: 0
     },
     stats: {
         totalTreesChopped: 0,
@@ -55,7 +64,10 @@ let gameState = {
         clicksInLastSecond: 0,
         recentClicks: [],
         woodPerSecond: 0,
-        woodGainHistory: []
+        woodGainHistory: [],
+        criticalHits: 0,
+        achievementsUnlocked: [],
+        prestigeCount: 0
     },
     playerName: '',
     gameStartTime: null,
@@ -65,10 +77,17 @@ let gameState = {
             start: false,
             beer: false,
             axe: false,
-            workers: false
+            workers: false,
+            achievements: false,
+            prestige: false
         }
-    }
+    },
+    autoClickerActive: false,
+    particles: []
 };
+
+let autoClickerInterval = null;
+let particleAnimationFrame = null;
 
 function calculatePrice(basePrice, quantity, type = 'worker') {
     if (!DIFFICULTY_CONFIG) return basePrice;
@@ -95,34 +114,50 @@ function getCurrentPrices() {
         ptitLu: calculatePrice(DIFFICULTY_CONFIG.prices.ptitLu, gameState.workers.ptitLu, 'ptitLu'),
         mathieu: calculatePrice(DIFFICULTY_CONFIG.prices.mathieu, gameState.workers.mathieu, 'mathieu'),
         vico: calculatePrice(DIFFICULTY_CONFIG.prices.vico, gameState.workers.vico, 'vico'),
-        beer: calculatePrice(DIFFICULTY_CONFIG.prices.beer, gameState.beer, 'beer')
+        beer: calculatePrice(DIFFICULTY_CONFIG.prices.beer, gameState.beer, 'beer'),
+        autoClicker: calculatePrice(DIFFICULTY_CONFIG.prices.autoClicker, gameState.upgrades.autoClicker, 'autoClicker'),
+        lumberjackSchool: calculatePrice(DIFFICULTY_CONFIG.prices.lumberjackSchool, gameState.upgrades.lumberjackSchool, 'lumberjackSchool'),
+        breweryBonus: calculatePrice(DIFFICULTY_CONFIG.prices.breweryBonus, gameState.upgrades.breweryBonus, 'breweryBonus'),
+        goldenAxe: calculatePrice(DIFFICULTY_CONFIG.prices.goldenAxe, gameState.upgrades.goldenAxe, 'goldenAxe'),
+        prestige: DIFFICULTY_CONFIG.prices.prestige
     };
 }
 
 let workerIntervals = {};
 
-function createFallingParticles() {
-    const particles = ['🪵', '🪵', '🍂', '🌿'];
+function createAdvancedParticles(type = 'wood', count = 8) {
     const container = document.querySelector('.main-game');
     if (!container) return;
     
-    for (let i = 0; i < 8; i++) {
+    const particleConfigs = {
+        wood: { particles: ['🪵', '🍂', '🌿'], colors: ['#8B4513', '#228B22', '#32CD32'] },
+        crit: { particles: ['💥', '⚡', '🔥'], colors: ['#FFD700', '#FF4500', '#FF6347'] },
+        beer: { particles: ['🍺', '🥂', '✨'], colors: ['#FFD700', '#FFA500', '#FFFF00'] },
+        achievement: { particles: ['🏆', '⭐', '🎉'], colors: ['#FFD700', '#FF69B4', '#00FA9A'] }
+    };
+    
+    const config = particleConfigs[type] || particleConfigs.wood;
+    
+    for (let i = 0; i < count; i++) {
         const particle = document.createElement('div');
-        particle.className = 'falling-particle';
-        particle.textContent = particles[Math.floor(Math.random() * particles.length)];
+        particle.className = `falling-particle ${type}-particle`;
+        particle.textContent = config.particles[Math.floor(Math.random() * config.particles.length)];
         
         const startX = (Math.random() - 0.5) * 400;
         const startY = (Math.random() - 0.5) * 100;
         const rotation = Math.random() * 720 - 360;
         const scale = 0.8 + Math.random() * 0.8;
+        const color = config.colors[Math.floor(Math.random() * config.colors.length)];
         
         particle.style.cssText = `
             left: calc(50% + ${startX}px);
             top: calc(50% + ${startY}px);
             font-size: ${1.5 * scale}rem;
-            animation: fall ${2 + Math.random()}s ease-in forwards;
+            color: ${color};
+            animation: advancedFall ${2 + Math.random()}s ease-in forwards;
             animation-delay: ${i * 0.05}s;
             transform: rotate(${rotation}deg) scale(${scale});
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
         `;
         
         container.appendChild(particle);
@@ -166,70 +201,51 @@ function updateSpeedDisplays() {
     if (clicksPerSecondElement) clicksPerSecondElement.textContent = clicksPerSecond.toFixed(1);
 }
 
-function showAperitifAnimation() {
+function showEnhancedAnimation(type, text) {
+    const animations = {
+        beer: () => showBeerAnimation(text),
+        achievement: () => showAchievementAnimation(text),
+        prestige: () => showPrestigeAnimation(text),
+        upgrade: () => showUpgradeAnimation(text, '#ffd93d')
+    };
+    
+    if (animations[type]) {
+        animations[type]();
+    }
+}
+
+function showBeerAnimation(text = 'APEROOOO!') {
     const animation = document.createElement('div');
-    animation.className = 'aperitif-animation';
-    animation.textContent = 'APEROOOO!';
+    animation.className = 'beer-celebration';
+    animation.textContent = text;
     
     const isMobile = window.innerWidth <= 768;
-    const isSmallMobile = window.innerWidth <= 480;
-    
-    let fontSize = '8rem';
-    if (isSmallMobile) {
-        fontSize = '3rem';
-    } else if (isMobile) {
-        fontSize = '5rem';
-    }
-    
+    const fontSize = isMobile ? '3rem' : '6rem';
     animation.style.fontSize = fontSize;
     
     document.body.appendChild(animation);
     
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 12; i++) {
         setTimeout(() => {
-            const glougou = document.createElement('div');
-            glougou.className = 'glougou';
-            glougou.textContent = 'glou';
+            const bubble = document.createElement('div');
+            bubble.className = 'beer-bubble';
+            bubble.textContent = ['🍺', '🥂', '🍻', '🧡'][Math.floor(Math.random() * 4)];
             
-            const angle = (i * 60) + Math.random() * 30;
-            const distance = 200 + Math.random() * 100;
+            const angle = (i * 30) + Math.random() * 15;
+            const distance = 150 + Math.random() * 100;
             const x = Math.cos(angle * Math.PI / 180) * distance;
             const y = Math.sin(angle * Math.PI / 180) * distance;
             
-            glougou.style.left = `calc(50% + ${x}px)`;
-            glougou.style.top = `calc(50% + ${y}px)`;
+            bubble.style.left = `calc(50% + ${x}px)`;
+            bubble.style.top = `calc(50% + ${y}px)`;
             
-            document.body.appendChild(glougou);
-            
-            setTimeout(() => {
-                if (glougou.parentNode) {
-                    glougou.parentNode.removeChild(glougou);
-                }
-            }, 2000);
-        }, i * 100);
-    }
-    
-    for (let i = 0; i < 8; i++) {
-        setTimeout(() => {
-            const beerEmoji = document.createElement('div');
-            beerEmoji.className = 'beer-emoji';
-            beerEmoji.textContent = '🍺';
-            
-            const angle = (i * 45) + Math.random() * 20;
-            const distance = 150 + Math.random() * 80;
-            const x = Math.cos(angle * Math.PI / 180) * distance;
-            const y = Math.sin(angle * Math.PI / 180) * distance;
-            
-            beerEmoji.style.left = `calc(50% + ${x}px)`;
-            beerEmoji.style.top = `calc(50% + ${y}px)`;
-            
-            document.body.appendChild(beerEmoji);
+            document.body.appendChild(bubble);
             
             setTimeout(() => {
-                if (beerEmoji.parentNode) {
-                    beerEmoji.parentNode.removeChild(beerEmoji);
+                if (bubble.parentNode) {
+                    bubble.parentNode.removeChild(bubble);
                 }
-            }, 2500);
+            }, 3000);
         }, i * 80);
     }
     
@@ -237,12 +253,94 @@ function showAperitifAnimation() {
         if (animation.parentNode) {
             animation.parentNode.removeChild(animation);
         }
-    }, 2000);
+    }, 3000);
+}
+
+function showAchievementAnimation(text) {
+    const notification = document.createElement('div');
+    notification.className = 'achievement-notification';
+    notification.innerHTML = `
+        <div class="achievement-icon">🏆</div>
+        <div class="achievement-text">
+            <div class="achievement-title">ACHIEVEMENT DÉBLOQUÉ !</div>
+            <div class="achievement-desc">${text}</div>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+        }
+    }, 4000);
+}
+
+function showPrestigeAnimation(text) {
+    const animation = document.createElement('div');
+    animation.className = 'prestige-animation';
+    animation.textContent = text;
+    
+    document.body.appendChild(animation);
+    
+    for (let i = 0; i < 20; i++) {
+        setTimeout(() => {
+            const star = document.createElement('div');
+            star.className = 'prestige-star';
+            star.textContent = '⭐';
+            
+            const angle = (i * 18) + Math.random() * 10;
+            const distance = 200 + Math.random() * 150;
+            const x = Math.cos(angle * Math.PI / 180) * distance;
+            const y = Math.sin(angle * Math.PI / 180) * distance;
+            
+            star.style.left = `calc(50% + ${x}px)`;
+            star.style.top = `calc(50% + ${y}px)`;
+            
+            document.body.appendChild(star);
+            
+            setTimeout(() => {
+                if (star.parentNode) {
+                    star.parentNode.removeChild(star);
+                }
+            }, 4000);
+        }, i * 50);
+    }
+    
+    setTimeout(() => {
+        if (animation.parentNode) {
+            animation.parentNode.removeChild(animation);
+        }
+    }, 4000);
+}
+
+function calculateCriticalHit() {
+    let critChance = DIFFICULTY_CONFIG.tree.criticalChance;
+    let critMultiplier = DIFFICULTY_CONFIG.tree.criticalMultiplier;
+    
+    if (gameState.upgrades.goldenAxe > 0) {
+        critChance += autoUpgrades.goldenAxe.critChanceBonus * gameState.upgrades.goldenAxe;
+        critMultiplier += autoUpgrades.goldenAxe.critMultiplierBonus * gameState.upgrades.goldenAxe;
+    }
+    
+    if (Math.random() < critChance) {
+        gameState.stats.criticalHits++;
+        return {
+            isCrit: true,
+            multiplier: critMultiplier
+        };
+    }
+    
+    return { isCrit: false, multiplier: 1 };
 }
 
 function chopTree() {
     console.log('Tree chopped!');
-    const damage = gameState.axeLevel;
+    
+    const crit = calculateCriticalHit();
+    const baseDamage = gameState.axeLevel * (1 + gameState.prestigePoints * prestigeConfig.clickBonus);
+    const damage = Math.floor(baseDamage * crit.multiplier);
+    
     gameState.treeHP -= damage;
     gameState.stats.totalClicks++;
     gameState.stats.recentClicks.push(Date.now());
@@ -252,11 +350,12 @@ function chopTree() {
     
     if (mainTree) {
         mainTree.classList.add('chopping');
-        mainTree.classList.add('chopping-cursor');
+        if (crit.isCrit) {
+            mainTree.classList.add('critical-hit');
+        }
         setTimeout(() => {
-            mainTree.classList.remove('chopping');
-            mainTree.classList.remove('chopping-cursor');
-        }, 250);
+            mainTree.classList.remove('chopping', 'critical-hit');
+        }, 300);
     }
     
     if (mainGame) {
@@ -266,11 +365,28 @@ function chopTree() {
         }, 150);
     }
     
-    createFallingParticles();
-    showFloatingText(`-${damage}`, '#ff4757');
+    if (crit.isCrit) {
+        createAdvancedParticles('crit', 12);
+        showFloatingText(`💥 CRITIQUE! -${damage}`, '#FFD700');
+        screenShake(300);
+    } else {
+        createAdvancedParticles('wood', 6);
+        showFloatingText(`-${damage}`, '#ff4757');
+    }
     
     processTreeDamage();
     updateUI();
+    checkAchievements();
+}
+
+function screenShake(duration = 300) {
+    const gameContainer = document.querySelector('.game-container');
+    if (gameContainer) {
+        gameContainer.classList.add('screen-shake');
+        setTimeout(() => {
+            gameContainer.classList.remove('screen-shake');
+        }, duration);
+    }
 }
 
 function processTreeDamage() {
@@ -286,8 +402,14 @@ function processTreeDamage() {
 
 function harvestTree() {
     const baseWood = Math.floor(Math.random() * (DIFFICULTY_CONFIG.tree.woodMax - DIFFICULTY_CONFIG.tree.woodMin + 1)) + DIFFICULTY_CONFIG.tree.woodMin;
-    const beerBonus = 1 + (gameState.beer * DIFFICULTY_CONFIG.beer.bonusPerBeer);
-    const woodGained = Math.floor(baseWood * beerBonus);
+    let beerBonus = 1 + (gameState.beer * DIFFICULTY_CONFIG.beer.bonusPerBeer);
+    let prestigeBonus = 1 + (gameState.prestigePoints * prestigeConfig.woodBonus);
+    
+    if (gameState.upgrades.breweryBonus > 0) {
+        beerBonus += autoUpgrades.breweryBonus.beerEfficiencyBonus * gameState.upgrades.breweryBonus;
+    }
+    
+    const woodGained = Math.floor(baseWood * beerBonus * prestigeBonus);
     
     gameState.wood += woodGained;
     gameState.stats.totalTreesChopped++;
@@ -313,6 +435,14 @@ function updateTreeHP() {
     const treeHpFill = document.querySelector('.tree-hp-fill');
     if (treeHpFill) {
         treeHpFill.style.width = `${percentage}%`;
+        
+        if (percentage > 60) {
+            treeHpFill.style.background = 'linear-gradient(90deg, #66bb6a, #4caf50)';
+        } else if (percentage > 30) {
+            treeHpFill.style.background = 'linear-gradient(90deg, #ffa726, #ff9800)';
+        } else {
+            treeHpFill.style.background = 'linear-gradient(90deg, #ff4757, #f44336)';
+        }
     }
 }
 
@@ -330,7 +460,7 @@ function showFloatingText(text, color = '#ffd93d') {
         text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
         pointer-events: none;
         z-index: 1000;
-        animation: floatUp 1.5s ease-out forwards;
+        animation: enhancedFloatUp 2s ease-out forwards;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
@@ -342,7 +472,7 @@ function showFloatingText(text, color = '#ffd93d') {
         if (element.parentNode) {
             element.parentNode.removeChild(element);
         }
-    }, 1500);
+    }, 2000);
 }
 
 function showUpgradeAnimation(text, color = '#ffd93d') {
@@ -377,7 +507,7 @@ function showUpgradeAnimation(text, color = '#ffd93d') {
         text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
         pointer-events: none;
         z-index: 2000;
-        animation: upgradePopup 2.5s ease-out forwards;
+        animation: enhancedUpgradePopup 3s ease-out forwards;
         text-align: center;
         white-space: ${whiteSpace};
         max-width: ${maxWidth};
@@ -391,7 +521,7 @@ function showUpgradeAnimation(text, color = '#ffd93d') {
         if (upgradeText.parentNode) {
             upgradeText.parentNode.removeChild(upgradeText);
         }
-    }, 2500);
+    }, 3000);
 }
 
 function upgradeAxe() {
@@ -402,14 +532,15 @@ function upgradeAxe() {
         updateUI();
         
         const upgradeMessages = [
-            '🪓 Hache améliorée ! Tu deviens un vrai bûcheron !',
+            '🪓 Hache améliorée ! Tu deviens redoutable !',
             '🪓 Nouvelle hache ! Les arbres tremblent !',
-            '🪓 Upgrade réussi ! Tu es de plus en plus fort !',
+            '🪓 Upgrade réussi ! Ta puissance augmente !',
             '🪓 Hache de légende ! Vico serait fier !',
-            '🪓 Niveau supérieur ! Tu maîtrises maintenant !'
+            '🪓 Niveau supérieur ! Tu maîtrises l\'art !'
         ];
         const randomMessage = upgradeMessages[Math.floor(Math.random() * upgradeMessages.length)];
         showUpgradeAnimation(randomMessage, '#ffd93d');
+        createAdvancedParticles('achievement', 8);
     }
 }
 
@@ -426,11 +557,56 @@ function buyWorker(workerType) {
         
         updateUI();
         const messages = {
-            ptitLu: " +1 P'tit Lu ! (Il va faire de son mieux...)",
+            ptitLu: "+1 P'tit Lu ! (Il va faire de son mieux...)",
             mathieu: 'Un Mathieu rejoint l\'équipe ! (Solide recrue 👍)', 
-            vico: 'UN VICO DE PLUS ! (Attention les arbres, la légende arrive! 🔥)'
+            vico: 'UN VICO DE PLUS ! (Attention les arbres ! 🔥)'
         };
         showUpgradeAnimation(messages[workerType], '#ffd93d');
+        checkAchievements();
+    }
+}
+
+function buyUpgrade(upgradeType) {
+    const prices = getCurrentPrices();
+    const price = prices[upgradeType];
+    
+    if (gameState.wood >= price) {
+        gameState.wood -= price;
+        gameState.upgrades[upgradeType]++;
+        
+        const messages = {
+            autoClicker: '🤖 Auto-Clicker activé ! La machine travaille !',
+            lumberjackSchool: '🎓 École de bûcherons ! Tes workers sont plus forts !',
+            breweryBonus: '🍺 Bonus brasserie ! Plus d\'efficacité bière !',
+            goldenAxe: '✨ Hache dorée ! Critiques plus fréquents !'
+        };
+        
+        if (upgradeType === 'autoClicker') {
+            startAutoClicker();
+        }
+        
+        showUpgradeAnimation(messages[upgradeType], '#FFD700');
+        createAdvancedParticles('achievement', 10);
+        updateUI();
+    }
+}
+
+function startAutoClicker() {
+    if (autoClickerInterval) clearInterval(autoClickerInterval);
+    
+    if (gameState.upgrades.autoClicker > 0) {
+        gameState.autoClickerActive = true;
+        autoClickerInterval = setInterval(() => {
+            const damage = Math.floor(autoUpgrades.autoClicker.efficiency * gameState.upgrades.autoClicker);
+            gameState.treeHP -= damage;
+            
+            if (Math.random() < 0.2) {
+                createAdvancedParticles('wood', 3);
+            }
+            
+            processTreeDamage();
+            updateUI();
+        }, autoUpgrades.autoClicker.speed);
     }
 }
 
@@ -441,13 +617,98 @@ function purchaseBeer() {
         gameState.beer++;
         gameState.stats.totalBeersConsumed++;
         
-        showAperitifAnimation();
+        showBeerAnimation();
+        createAdvancedParticles('beer', 10);
         updateUI();
+        checkAchievements();
         
         if (gameState.beer >= DIFFICULTY_CONFIG.beer.targetBeers) {
             showEndScreen();
         }
     }
+}
+
+function checkAchievements() {
+    if (!achievements) return;
+    
+    const achievementChecks = {
+        firstClick: () => gameState.stats.totalClicks >= 1,
+        firstBeer: () => gameState.stats.totalBeersConsumed >= 1,
+        firstWorker: () => gameState.stats.workersHired >= 1,
+        speedDemon: () => {
+            const now = Date.now();
+            const recent = gameState.stats.recentClicks.filter(time => now - time < 10000);
+            return recent.length >= 100;
+        },
+        lumberjack: () => gameState.stats.totalTreesChopped >= 100,
+        beerLover: () => gameState.stats.totalBeersConsumed >= 50,
+        teamLeader: () => gameState.stats.workersHired >= 10,
+        valouteMaster: () => gameState.beer >= DIFFICULTY_CONFIG.beer.targetBeers
+    };
+    
+    Object.keys(achievementChecks).forEach(achievementKey => {
+        if (!gameState.stats.achievementsUnlocked.includes(achievementKey) && achievementChecks[achievementKey]()) {
+            unlockAchievement(achievementKey);
+        }
+    });
+}
+
+function unlockAchievement(achievementKey) {
+    if (!achievements[achievementKey]) return;
+    
+    gameState.stats.achievementsUnlocked.push(achievementKey);
+    const achievement = achievements[achievementKey];
+    
+    gameState.wood += achievement.reward;
+    
+    showAchievementAnimation(`${achievement.name}: ${achievement.desc} (+${achievement.reward} 🪵)`);
+    createAdvancedParticles('achievement', 15);
+    
+    if (!gameState.tutorial.shownSteps.achievements) {
+        setTimeout(() => showTutorialStep('achievements'), 1000);
+    }
+    
+    console.log(`Achievement unlocked: ${achievement.name}`);
+}
+
+function canPrestige() {
+    return gameState.beer >= DIFFICULTY_CONFIG.beer.prestigeBeers;
+}
+
+function doPrestige() {
+    if (!canPrestige()) return;
+    
+    const prestigePointsGained = Math.floor(gameState.beer / 100);
+    gameState.prestigePoints += prestigePointsGained;
+    gameState.stats.prestigeCount++;
+    
+    gameState.wood = 0;
+    gameState.beer = 0;
+    gameState.axeLevel = 1;
+    gameState.treeHP = 10;
+    gameState.maxTreeHP = 10;
+    gameState.workers = { ptitLu: 0, mathieu: 0, vico: 0 };
+    gameState.upgrades = { autoClicker: 0, lumberjackSchool: 0, breweryBonus: 0, goldenAxe: 0 };
+    gameState.autoClickerActive = false;
+    
+    if (autoClickerInterval) {
+        clearInterval(autoClickerInterval);
+        autoClickerInterval = null;
+    }
+    
+    Object.keys(workerIntervals).forEach(key => {
+        if (workerIntervals[key]) clearInterval(workerIntervals[key]);
+    });
+    workerIntervals = {};
+    
+    showPrestigeAnimation(`🌟 PRESTIGE! +${prestigePointsGained} Points de Prestige! 🌟`);
+    
+    if (!gameState.tutorial.shownSteps.prestige) {
+        setTimeout(() => showTutorialStep('prestige'), 2000);
+    }
+    
+    updateUI();
+    respawnTree();
 }
 
 function updateUI() {
@@ -461,6 +722,7 @@ function updateUI() {
     updateWorkerCounts();
     updateValouHappiness();
     updateStats();
+    updatePrestigeDisplay();
     checkTutorialTriggers();
 }
 
@@ -474,29 +736,64 @@ function updateShopButtons() {
 
     if (upgradeAxe) {
         upgradeAxe.disabled = gameState.wood < prices.axeUpgrade;
-        upgradeAxe.textContent = `🪓 Améliorer ta hache (niv.${gameState.axeLevel}) - ${prices.axeUpgrade} 🪵`;
+        upgradeAxe.textContent = `🪓 Améliorer hache (niv.${gameState.axeLevel}) - ${prices.axeUpgrade} 🪵`;
     }
     
     if (buyPtitLu) {
         buyPtitLu.disabled = gameState.wood < prices.ptitLu;
-        buyPtitLu.textContent = `😴 PtitLu (...pas oof) - ${prices.ptitLu} 🪵`;
+        buyPtitLu.textContent = `😴 P'tit Lu (faible) - ${prices.ptitLu} 🪵`;
     }
     
     if (buyMathieu) {
         buyMathieu.disabled = gameState.wood < prices.mathieu;
-        buyMathieu.textContent = `😊 Mathieu (Du bon bucheron ça!) - ${prices.mathieu} 🪵`;
+        buyMathieu.textContent = `😊 Mathieu (solide) - ${prices.mathieu} 🪵`;
     }
     
     if (buyVico) {
         buyVico.disabled = gameState.wood < prices.vico;
-        buyVico.textContent = `💪 Vico (la machine absolue!) - ${prices.vico} 🪵`;
+        buyVico.textContent = `💪 Vico (machine) - ${prices.vico} 🪵`;
     }
     
     if (buyBeer) {
         buyBeer.disabled = gameState.wood < prices.beer;
-        const currentBonus = gameState.beer;
-        const nextBonus = gameState.beer + 1;
-        buyBeer.textContent = `🍺 Bière pour Valou (+${nextBonus}% bois) - ${prices.beer} 🪵`;
+        const currentBonus = Math.round(gameState.beer * DIFFICULTY_CONFIG.beer.bonusPerBeer * 100);
+        const nextBonus = Math.round((gameState.beer + 1) * DIFFICULTY_CONFIG.beer.bonusPerBeer * 100);
+        buyBeer.textContent = `🍺 Bière (+${nextBonus}% bois) - ${prices.beer} 🪵`;
+    }
+    
+    updateAdvancedShopButtons();
+}
+
+function updateAdvancedShopButtons() {
+    const prices = getCurrentPrices();
+    
+    const upgradeButtons = {
+        autoClicker: document.getElementById('buyAutoClicker'),
+        lumberjackSchool: document.getElementById('buyLumberjackSchool'),
+        breweryBonus: document.getElementById('buyBreweryBonus'),
+        goldenAxe: document.getElementById('buyGoldenAxe')
+    };
+    
+    const buttonTexts = {
+        autoClicker: `🤖 Auto-Clicker (${gameState.upgrades.autoClicker}) - ${prices.autoClicker} 🪵`,
+        lumberjackSchool: `🎓 École bûcherons (${gameState.upgrades.lumberjackSchool}) - ${prices.lumberjackSchool} 🪵`,
+        breweryBonus: `🍺 Bonus brasserie (${gameState.upgrades.breweryBonus}) - ${prices.breweryBonus} 🪵`,
+        goldenAxe: `✨ Hache dorée (${gameState.upgrades.goldenAxe}) - ${prices.goldenAxe} 🪵`
+    };
+    
+    Object.keys(upgradeButtons).forEach(key => {
+        const button = upgradeButtons[key];
+        if (button) {
+            button.disabled = gameState.wood < prices[key];
+            button.textContent = buttonTexts[key];
+        }
+    });
+    
+    const prestigeButton = document.getElementById('prestigeButton');
+    if (prestigeButton) {
+        prestigeButton.disabled = !canPrestige();
+        const prestigePoints = Math.floor(gameState.beer / 100);
+        prestigeButton.textContent = `🌟 PRESTIGE (+${prestigePoints} PP) - ${DIFFICULTY_CONFIG.beer.prestigeBeers} 🍺`;
     }
 }
 
@@ -516,12 +813,33 @@ function updateStats() {
     const totalBeersElement = document.getElementById('totalBeers');
     const totalClicksElement = document.getElementById('totalClicks');
     const workersHiredElement = document.getElementById('workersHired');
+    const criticalHitsElement = document.getElementById('criticalHits');
+    const achievementsCountElement = document.getElementById('achievementsCount');
     
     if (totalTreesElement) totalTreesElement.textContent = gameState.stats.totalTreesChopped;
     if (totalWoodElement) totalWoodElement.textContent = gameState.stats.totalWoodGained;
     if (totalBeersElement) totalBeersElement.textContent = gameState.stats.totalBeersConsumed;
     if (totalClicksElement) totalClicksElement.textContent = gameState.stats.totalClicks;
     if (workersHiredElement) workersHiredElement.textContent = gameState.stats.workersHired;
+    if (criticalHitsElement) criticalHitsElement.textContent = gameState.stats.criticalHits;
+    if (achievementsCountElement) achievementsCountElement.textContent = gameState.stats.achievementsUnlocked.length;
+    
+    const achievementsCountStatsElement = document.getElementById('achievementsCountStats');
+    if (achievementsCountStatsElement) achievementsCountStatsElement.textContent = gameState.stats.achievementsUnlocked.length;
+}
+
+function updatePrestigeDisplay() {
+    const prestigePointsElement = document.getElementById('prestigePoints');
+    const prestigeCountElement = document.getElementById('prestigeCount');
+    const prestigePointsInvElement = document.getElementById('prestigePointsInv');
+    const autoClickerStatusElement = document.getElementById('autoClickerStatus');
+    
+    if (prestigePointsElement) prestigePointsElement.textContent = gameState.prestigePoints;
+    if (prestigeCountElement) prestigeCountElement.textContent = gameState.stats.prestigeCount;
+    if (prestigePointsInvElement) prestigePointsInvElement.textContent = gameState.prestigePoints;
+    if (autoClickerStatusElement) {
+        autoClickerStatusElement.textContent = gameState.autoClickerActive ? '✅' : '❌';
+    }
 }
 
 function updateValouHappiness() {
@@ -536,24 +854,32 @@ function updateValouHappiness() {
     if (valouFace) {
         if (gameState.beer >= DIFFICULTY_CONFIG.beer.targetBeers) {
             valouFace.textContent = '🤩';
-        } else if (gameState.beer >= 200) {
+        } else if (gameState.beer >= 300) {
             valouFace.textContent = '😍';
-        } else if (gameState.beer >= 50) {
+        } else if (gameState.beer >= 200) {
             valouFace.textContent = '😊';
-        } else if (gameState.beer >= 10) {
+        } else if (gameState.beer >= 100) {
             valouFace.textContent = '🙂';
-        } else {
+        } else if (gameState.beer >= 50) {
             valouFace.textContent = '😐';
+        } else {
+            valouFace.textContent = '😕';
         }
     }
 }
 
 function workerChop(workerType) {
-    const damage = workerEfficiency[workerType];
+    let efficiency = workerEfficiency[workerType];
+    
+    if (gameState.upgrades.lumberjackSchool > 0) {
+        efficiency *= (1 + autoUpgrades.lumberjackSchool.workerBonus * gameState.upgrades.lumberjackSchool);
+    }
+    
+    const damage = Math.floor(efficiency * (1 + gameState.prestigePoints * prestigeConfig.clickBonus));
     gameState.treeHP -= damage;
     
     if (Math.random() < 0.3) {
-        createFallingParticles();
+        createAdvancedParticles('wood', 3);
     }
     
     processTreeDamage();
@@ -568,11 +894,17 @@ function createWorkerInterval(workerType) {
     if (gameState.workers[workerType] > 0) {
         workerIntervals[workerType] = setInterval(() => {
             if (gameState.workers[workerType] > 0) {
-                const totalDamage = workerEfficiency[workerType] * gameState.workers[workerType];
+                let totalEfficiency = workerEfficiency[workerType] * gameState.workers[workerType];
+                
+                if (gameState.upgrades.lumberjackSchool > 0) {
+                    totalEfficiency *= (1 + autoUpgrades.lumberjackSchool.workerBonus * gameState.upgrades.lumberjackSchool);
+                }
+                
+                const totalDamage = Math.floor(totalEfficiency * (1 + gameState.prestigePoints * prestigeConfig.clickBonus));
                 gameState.treeHP -= totalDamage;
                 
                 if (Math.random() < 0.3) {
-                    createFallingParticles();
+                    createAdvancedParticles('wood', 2);
                 }
                 
                 processTreeDamage();
@@ -586,6 +918,10 @@ function startWorkerLoop() {
     Object.keys(gameState.workers).forEach(workerType => {
         createWorkerInterval(workerType);
     });
+    
+    if (gameState.upgrades.autoClicker > 0) {
+        startAutoClicker();
+    }
 }
 
 function bindEvents() {
@@ -627,6 +963,21 @@ function bindEvents() {
     
     const buyBeerBtn = document.getElementById('buyBeer');
     if (buyBeerBtn) buyBeerBtn.addEventListener('click', () => purchaseBeer());
+    
+    const buyAutoClickerBtn = document.getElementById('buyAutoClicker');
+    if (buyAutoClickerBtn) buyAutoClickerBtn.addEventListener('click', () => buyUpgrade('autoClicker'));
+    
+    const buyLumberjackSchoolBtn = document.getElementById('buyLumberjackSchool');
+    if (buyLumberjackSchoolBtn) buyLumberjackSchoolBtn.addEventListener('click', () => buyUpgrade('lumberjackSchool'));
+    
+    const buyBreweryBonusBtn = document.getElementById('buyBreweryBonus');
+    if (buyBreweryBonusBtn) buyBreweryBonusBtn.addEventListener('click', () => buyUpgrade('breweryBonus'));
+    
+    const buyGoldenAxeBtn = document.getElementById('buyGoldenAxe');
+    if (buyGoldenAxeBtn) buyGoldenAxeBtn.addEventListener('click', () => buyUpgrade('goldenAxe'));
+    
+    const prestigeBtn = document.getElementById('prestigeButton');
+    if (prestigeBtn) prestigeBtn.addEventListener('click', () => doPrestige());
 }
 
 async function initGame() {
@@ -645,7 +996,8 @@ async function initGame() {
     respawnTree();
     
     setInterval(updateSpeedDisplays, 1);
-    setInterval(updateUI, 50);
+    setInterval(updateUI, 100);
+    setInterval(checkAchievements, 500);
     
     console.log('Game initialized!');
 }
@@ -721,48 +1073,53 @@ function showEndScreen() {
     endModal.className = 'modal-overlay';
     endModal.innerHTML = `
         <div class="modal end-screen">
-            <h2>C'EST LA VALOUTE</h2>
-            <p>Tu as réussi à finir le Valou</p>
+            <h2>🎉 VALOUTE LÉGENDAIRE ! 🎉</h2>
+            <p>Tu as réussi la quête ultime !</p>
             <p class="beer-emoji">🍺</p>
-            <p><strong>GG</strong></p>
+            <p><strong>FÉLICITATIONS CHAMPION !</strong></p>
             
             <div class="stats-table">
-                <h3>Ton tableau de bord</h3>
+                <h3>📊 Tableau de bord final</h3>
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-icon">⏱️</div>
                         <div class="stat-value">${minutes}m ${seconds}s</div>
-                        <div class="stat-label">Temps de jeu</div>
+                        <div class="stat-label">Temps total</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon">🌳</div>
                         <div class="stat-value">${gameState.stats.totalTreesChopped}</div>
-                        <div class="stat-label">Arbres massacrés</div>
+                        <div class="stat-label">Arbres abattus</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon">🪵</div>
                         <div class="stat-value">${gameState.stats.totalWoodGained}</div>
-                        <div class="stat-label">Bois récupéré</div>
+                        <div class="stat-label">Bois collecté</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon">🍺</div>
                         <div class="stat-value">${gameState.stats.totalBeersConsumed}</div>
-                        <div class="stat-label">Bières pour Valou</div>
+                        <div class="stat-label">Bières servies</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon">👆</div>
                         <div class="stat-value">${gameState.stats.totalClicks}</div>
-                        <div class="stat-label">Clics</div>
+                        <div class="stat-label">Clics puissants</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon">👥</div>
                         <div class="stat-value">${gameState.stats.workersHired}</div>
-                        <div class="stat-label">Potes embauchés</div>
+                        <div class="stat-label">Équipiers recrutés</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon">🪓</div>
                         <div class="stat-value">${gameState.axeLevel}</div>
                         <div class="stat-label">Niveau de hache</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💥</div>
+                        <div class="stat-value">${gameState.stats.criticalHits}</div>
+                        <div class="stat-label">Coups critiques</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon">⚡</div>
@@ -771,7 +1128,17 @@ function showEndScreen() {
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon">🏆</div>
-                        <div class="stat-value">${gameState.beer >= 420 ? 'LÉGENDE' : 'CHAMPION'}</div>
+                        <div class="stat-value">${gameState.stats.achievementsUnlocked.length}/8</div>
+                        <div class="stat-label">Achievements</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🌟</div>
+                        <div class="stat-value">${gameState.prestigePoints}</div>
+                        <div class="stat-label">Points Prestige</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">👑</div>
+                        <div class="stat-value">LÉGENDE</div>
                         <div class="stat-label">Statut final</div>
                     </div>
                 </div>
@@ -779,9 +1146,10 @@ function showEndScreen() {
             
             <div class="social-share">
                 <div class="share-buttons">
-                    <button class="share-btn-main" onclick="shareResults()">Partager mon score</button>
-                    <button class="scores-btn-end" onclick="showScoresModal()">SCORES 🏆</button>
-                    <button class="restart-btn" onclick="restartGame()">Recommencer une partie</button>
+                    <button class="share-btn-main" onclick="shareResults()">📱 Partager mon score</button>
+                    <button class="scores-btn-end" onclick="showScoresModal()">🏆 SCORES</button>
+                    <button class="restart-btn" onclick="restartGame()">🔄 Recommencer</button>
+                    ${canPrestige() ? '<button class="prestige-btn-end" onclick="doPrestige()">🌟 PRESTIGE</button>' : ''}
                 </div>
             </div>
         </div>
@@ -820,7 +1188,8 @@ function saveGameResults(gameTimeMs, woodPerMinute) {
             actions: {
                 totalClicks: gameState.stats.totalClicks,
                 totalTreesChopped: gameState.stats.totalTreesChopped,
-                workersHired: gameState.stats.workersHired
+                workersHired: gameState.stats.workersHired,
+                criticalHits: gameState.stats.criticalHits
             },
             upgrades: {
                 finalAxeLevel: gameState.axeLevel,
@@ -829,7 +1198,8 @@ function saveGameResults(gameTimeMs, woodPerMinute) {
                     mathieu: gameState.workers.mathieu,
                     vico: gameState.workers.vico,
                     totalWorkers: gameState.workers.ptitLu + gameState.workers.mathieu + gameState.workers.vico
-                }
+                },
+                special: gameState.upgrades
             },
             efficiency: {
                 woodPerMinute: woodPerMinute,
@@ -842,7 +1212,9 @@ function saveGameResults(gameTimeMs, woodPerMinute) {
             completion: {
                 targetReached: gameState.beer >= 420,
                 completionPercentage: Math.round((gameState.beer / 420) * 100),
-                finalStatus: gameState.beer >= 420 ? 'LÉGENDE' : 'CHAMPION'
+                finalStatus: 'LÉGENDE',
+                achievementsUnlocked: gameState.stats.achievementsUnlocked.length,
+                prestigePoints: gameState.prestigePoints
             },
             tutorial: {
                 tutorialEnabled: gameState.tutorial.enabled,
@@ -898,8 +1270,8 @@ function shareResults() {
             
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 navigator.share({
-                    title: 'Mon score Valouniversaire !',
-                    text: '🎉 J\'ai terminé le Valouniversaire ! 🍺',
+                    title: 'Mon score Valouniversaire LÉGENDAIRE !',
+                    text: '🎉 J\'ai conquis le Valouniversaire ! 🍺👑',
                     files: [file]
                 }).then(() => {
                     console.log('Partage réussi !');
@@ -927,8 +1299,8 @@ function shareImageAsDataUrl(blob) {
         
         if (navigator.share) {
             navigator.share({
-                title: 'Mon score Valouniversaire !',
-                text: '🎉 J\'ai terminé le Valouniversaire ! 🍺',
+                title: 'Mon score Valouniversaire LÉGENDAIRE !',
+                text: '🎉 J\'ai conquis le Valouniversaire ! 🍺👑',
                 url: dataUrl
             }).then(() => {
                 console.log('Partage URL réussi !');
@@ -959,7 +1331,6 @@ function copyImageToClipboard(blob) {
 function captureStatsTable(element) {
     return new Promise((resolve, reject) => {
         try {
-            // Get all stats cards with their actual content
             const statsCards = element.querySelectorAll('.stat-card');
             console.log('Found', statsCards.length, 'stat cards');
             
@@ -968,11 +1339,9 @@ function captureStatsTable(element) {
                 return;
             }
             
-            // Create canvas
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             
-            // Set canvas size - INCREASED SIZE
             const padding = 50;
             const cardWidth = 220;
             const cardHeight = 140;
@@ -982,33 +1351,28 @@ function captureStatsTable(element) {
             canvas.width = cardsPerRow * cardWidth + (cardsPerRow + 1) * 40;
             canvas.height = 140 + rows * cardHeight + (rows + 1) * 40;
             
-            // Fill background
             const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
             gradient.addColorStop(0, '#2d4a2d');
             gradient.addColorStop(1, '#1a3a1a');
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // Draw border
             ctx.strokeStyle = '#ffd93d';
             ctx.lineWidth = 4;
             drawRoundRect(ctx, 10, 10, canvas.width - 20, canvas.height - 20, 15);
             ctx.stroke();
             
-            // Draw title
             ctx.fillStyle = '#ffd93d';
             ctx.font = 'bold 28px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText('📊 Tableau de bord final', canvas.width / 2, 60);
+            ctx.fillText('🏆 Tableau de bord LÉGENDAIRE', canvas.width / 2, 60);
             
-            // Draw each stat card
             statsCards.forEach((card, index) => {
                 const row = Math.floor(index / cardsPerRow);
                 const col = index % cardsPerRow;
                 const x = 40 + col * (cardWidth + 40);
                 const y = 110 + row * (cardHeight + 40);
                 
-                // Get card content
                 const iconElement = card.querySelector('.stat-icon');
                 const valueElement = card.querySelector('.stat-value');
                 const labelElement = card.querySelector('.stat-label');
@@ -1024,41 +1388,34 @@ function captureStatsTable(element) {
                 
                 console.log(`Card ${index}: ${icon} ${value} ${label}`);
                 
-                // Draw card background
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
                 drawRoundRect(ctx, x, y, cardWidth, cardHeight, 12);
                 ctx.fill();
                 
-                // Draw card border
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
                 ctx.lineWidth = 2;
                 drawRoundRect(ctx, x, y, cardWidth, cardHeight, 12);
                 ctx.stroke();
                 
-                // Draw icon
                 ctx.font = '32px Arial';
                 ctx.textAlign = 'center';
                 ctx.fillStyle = '#fff';
                 ctx.fillText(icon, x + cardWidth/2, y + 45);
                 
-                // Draw value
                 ctx.font = 'bold 22px Arial';
                 ctx.fillStyle = '#ffd93d';
                 ctx.fillText(value, x + cardWidth/2, y + 80);
                 
-                // Draw label
                 ctx.font = '14px Arial';
                 ctx.fillStyle = '#ccc';
                 ctx.fillText(label.toUpperCase(), x + cardWidth/2, y + 105);
             });
             
-            // Add watermark
             ctx.font = '18px Arial';
             ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
             ctx.textAlign = 'center';
-            ctx.fillText('#Valouniversaire', canvas.width / 2, canvas.height - 25);
+            ctx.fillText('#Valouniversaire #LÉGENDE', canvas.width / 2, canvas.height - 25);
             
-            // Convert to blob
             canvas.toBlob((blob) => {
                 if (blob) {
                     console.log('Canvas converted to blob successfully');
@@ -1093,13 +1450,13 @@ function downloadImage(blob) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'valouniversaire-stats.png';
+    a.download = 'valouniversaire-LEGENDE.png';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    alert('🎉 Ton tableau de stats a été téléchargé ! Partage-le où tu veux !');
+    alert('🎉 Ton tableau de LÉGENDE a été téléchargé !');
 }
 
 function fallbackTextShare() {
@@ -1108,10 +1465,7 @@ function fallbackTextShare() {
     const seconds = Math.floor((elapsed % 60000) / 1000);
     const timeText = `${minutes}:${seconds.toString().padStart(2, '0')}`;
     
-    const totalDamageDealt = gameState.stats.totalClicks * gameState.axeLevel + 
-        (gameState.workers.ptitLu * 0.5 + gameState.workers.mathieu * 2 + gameState.workers.vico * 5) * (elapsed / 1000);
-    
-    const shareText = `🎉 J'ai terminé le Valouniversaire ! 🎉\n🍺 420 bières pour Valou en ${timeText} !\n🌳 ${gameState.stats.totalTreesChopped} arbres coupés\n🪵 ${gameState.stats.totalWoodGained} bois récoltés\n👆 ${gameState.stats.totalClicks} clics\n👷 ${gameState.stats.workersHired} workers embauchés\n⚔️ ${Math.floor(totalDamageDealt)} dégâts infligés\n\n#Valouniversaire #Achievement`;
+    const shareText = `🏆 VALOUNIVERSAIRE CONQUIS ! 🏆\n🍺 420 bières pour Valou en ${timeText} !\n🌳 ${gameState.stats.totalTreesChopped} arbres massacrés\n🪵 ${gameState.stats.totalWoodGained} bois récoltés\n👆 ${gameState.stats.totalClicks} clics puissants\n💥 ${gameState.stats.criticalHits} coups critiques\n👷 ${gameState.stats.workersHired} workers embauchés\n🏆 ${gameState.stats.achievementsUnlocked.length}/8 achievements\n🌟 ${gameState.prestigePoints} points prestige\n\n#Valouniversaire #LÉGENDE #Champion`;
     
     fallbackShare(shareText);
 }
@@ -1119,7 +1473,7 @@ function fallbackTextShare() {
 function fallbackShare(text) {
     if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(text).then(() => {
-            alert('🎉 Ton score a été copié ! Colle-le où tu veux pour le partager !');
+            alert('🎉 Ton score LÉGENDAIRE a été copié !');
         }).catch(() => {
             promptFallback(text);
         });
@@ -1138,9 +1492,9 @@ function promptFallback(text) {
     
     try {
         document.execCommand('copy');
-        alert('🎉 Ton score a été copié ! Colle-le où tu veux pour le partager !');
+        alert('🎉 Ton score LÉGENDAIRE a été copié !');
     } catch (err) {
-        prompt('📋 Copie ce texte pour partager ton score :', text);
+        prompt('📋 Copie ce texte pour partager ton score LÉGENDAIRE :', text);
     }
     
     document.body.removeChild(textArea);
@@ -1152,6 +1506,7 @@ function restartGame() {
     gameState = {
         wood: 0,
         beer: 0,
+        prestigePoints: 0,
         currentTool: 'manual',
         treeHP: 10,
         maxTreeHP: 10,
@@ -1160,6 +1515,12 @@ function restartGame() {
             ptitLu: 0,
             mathieu: 0,
             vico: 0
+        },
+        upgrades: {
+            autoClicker: 0,
+            lumberjackSchool: 0,
+            breweryBonus: 0,
+            goldenAxe: 0
         },
         stats: {
             totalTreesChopped: 0,
@@ -1171,7 +1532,10 @@ function restartGame() {
             clicksInLastSecond: 0,
             recentClicks: [],
             woodPerSecond: 0,
-            woodGainHistory: []
+            woodGainHistory: [],
+            criticalHits: 0,
+            achievementsUnlocked: [],
+            prestigeCount: 0
         },
         playerName: playerName,
         gameStartTime: Date.now(),
@@ -1181,10 +1545,24 @@ function restartGame() {
                 start: false,
                 beer: false,
                 axe: false,
-                workers: false
+                workers: false,
+                achievements: false,
+                prestige: false
             }
-        }
+        },
+        autoClickerActive: false,
+        particles: []
     };
+    
+    if (autoClickerInterval) {
+        clearInterval(autoClickerInterval);
+        autoClickerInterval = null;
+    }
+    
+    Object.keys(workerIntervals).forEach(key => {
+        if (workerIntervals[key]) clearInterval(workerIntervals[key]);
+    });
+    workerIntervals = {};
     
     document.querySelector('.modal-overlay:last-child').remove();
     document.querySelector('.game-container').style.display = 'flex';
@@ -1204,20 +1582,28 @@ function showTutorialStep(step) {
     
     const tutorials = {
         start: {
-            title: ' Premier contact !',
-            text: 'Clique sur l\'arbre 🌳 pour le couper et récupérer du bois ! Plus tu cliques, plus tu deviens fort ! '
+            title: '🌳 Premier contact !',
+            text: 'Clique sur l\'arbre pour le couper ! Plus tu cliques, plus tu deviens puissant !'
         },
         beer: {
-            title: ' Première bière !',
-            text: 'Bravo ! Tu peux maintenant acheter une bière pour Valou ! Chaque bière augmente tes gains de bois ! '
+            title: '🍺 Première bière !',
+            text: 'Excellent ! Chaque bière booste tes gains de bois ! Continue comme ça !'
         },
         axe: {
-            title: ' Upgrade time !',
-            text: 'Tu peux améliorer ta hache ! Plus elle est forte, plus tu fais de dégâts par clic ! '
+            title: '🪓 Upgrade time !',
+            text: 'Améliore ta hache pour faire plus de dégâts ! Les arbres n\'ont qu\'à bien se tenir !'
         },
         workers: {
-            title: ' Recrute tes potes !',
-            text: 'Embauche des copains pour t\'aider ! PtitLu est pas ouf, Mathieu est solide, Vico est une légende ! '
+            title: '👥 Recrute tes potes !',
+            text: 'Embauche des copains ! P\'tit Lu est faible, Mathieu solide, Vico légendaire !'
+        },
+        achievements: {
+            title: '🏆 Achievements !',
+            text: 'Tu débloques des achievements ! Ils donnent du bois bonus ! Continue à jouer !'
+        },
+        prestige: {
+            title: '🌟 Système de Prestige !',
+            text: 'Le prestige remet à zéro mais donne des bonus permanents ! Pour les vrais champions !'
         }
     };
     
