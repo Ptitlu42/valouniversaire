@@ -1,0 +1,908 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>server: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">valouniversaire/cmd/server/main.go (0.0%)</option>
+				
+				<option value="file1">valouniversaire/internal/game/game.go (92.3%)</option>
+				
+				<option value="file2">valouniversaire/internal/web/handlers.go (91.7%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "flag"
+        "fmt"
+        "log"
+        "net/http"
+        "os"
+        "os/signal"
+        "syscall"
+        "time"
+        
+        "valouniversaire/internal/web"
+)
+
+const (
+        defaultPort = "8080"
+        defaultHost = "localhost"
+)
+
+func main() <span class="cov0" title="0">{
+        var (
+                port = flag.String("port", getEnv("PORT", defaultPort), "Server port")
+                host = flag.String("host", getEnv("HOST", defaultHost), "Server host")
+                dev  = flag.Bool("dev", false, "Development mode")
+        )
+        flag.Parse()
+
+        server := web.NewServer()
+        mux := server.SetupRoutes()
+
+        addr := fmt.Sprintf("%s:%s", *host, *port)
+        
+        httpServer := &amp;http.Server{
+                Addr:         addr,
+                Handler:      mux,
+                ReadTimeout:  30 * time.Second,
+                WriteTimeout: 30 * time.Second,
+                IdleTimeout:  120 * time.Second,
+        }
+
+        log.Printf("🌳 Valouniversaire server starting...")
+        log.Printf("🌐 Server listening on http://%s", addr)
+        if *dev </span><span class="cov0" title="0">{
+                log.Printf("🔧 Development mode enabled")
+        }</span>
+        <span class="cov0" title="0">log.Printf("📋 Available endpoints:")
+        log.Printf("   GET  /                 - Game interface")
+        log.Printf("   GET  /api/state        - Get game state")
+        log.Printf("   POST /api/action       - Perform game action")
+        log.Printf("   GET  /api/scores       - Get player scores")
+        log.Printf("   POST /api/reset        - Reset player game")
+        log.Printf("   GET  /api/health       - Health check")
+        log.Printf("   GET  /static/*         - Static files")
+
+        go func() </span><span class="cov0" title="0">{
+                if err := httpServer.ListenAndServe(); err != nil &amp;&amp; err != http.ErrServerClosed </span><span class="cov0" title="0">{
+                        log.Fatalf("❌ Server failed to start: %v", err)
+                }</span>
+        }()
+
+        <span class="cov0" title="0">quit := make(chan os.Signal, 1)
+        signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+        &lt;-quit
+        log.Println("🛑 Server shutting down...")
+
+        log.Println("✅ Server stopped gracefully")</span>
+}
+
+func getEnv(key, defaultValue string) string <span class="cov0" title="0">{
+        if value := os.Getenv(key); value != "" </span><span class="cov0" title="0">{
+                return value
+        }</span>
+        <span class="cov0" title="0">return defaultValue</span>
+}</pre>
+		
+		<pre class="file" id="file1" style="display: none">package game
+
+import (
+        "fmt"
+        "math"
+        "math/rand"
+        "time"
+)
+
+type GameState struct {
+        PlayerName    string    `json:"player_name"`
+        Wood          int       `json:"wood"`
+        Beer          int       `json:"beer"`
+        PrestigePoints int      `json:"prestige_points"`
+        AxeLevel      int       `json:"axe_level"`
+        TreeHP        int       `json:"tree_hp"`
+        MaxTreeHP     int       `json:"max_tree_hp"`
+        Workers       Workers   `json:"workers"`
+        Upgrades      Upgrades  `json:"upgrades"`
+        Stats         Stats     `json:"stats"`
+        StartTime     time.Time `json:"start_time"`
+        LastUpdate    time.Time `json:"last_update"`
+}
+
+type Workers struct {
+        PtitLu  int `json:"ptit_lu"`
+        Mathieu int `json:"mathieu"`
+        Vico    int `json:"vico"`
+}
+
+type Upgrades struct {
+        AutoClicker       int `json:"auto_clicker"`
+        LumberjackSchool  int `json:"lumberjack_school"`
+        BreweryBonus      int `json:"brewery_bonus"`
+        GoldenAxe         int `json:"golden_axe"`
+}
+
+type Stats struct {
+        TotalTreesChopped   int   `json:"total_trees_chopped"`
+        TotalWoodGained     int   `json:"total_wood_gained"`
+        TotalBeersConsumed  int   `json:"total_beers_consumed"`
+        TotalClicks         int   `json:"total_clicks"`
+        WorkersHired        int   `json:"workers_hired"`
+        CriticalHits        int   `json:"critical_hits"`
+        AchievementsUnlocked []string `json:"achievements_unlocked"`
+        PrestigeCount       int   `json:"prestige_count"`
+}
+
+type Config struct {
+        TreeMinHP        int     `json:"tree_min_hp"`
+        TreeMaxHP        int     `json:"tree_max_hp"`
+        WoodMin          int     `json:"wood_min"`
+        WoodMax          int     `json:"wood_max"`
+        CriticalChance   float64 `json:"critical_chance"`
+        CriticalMultiplier float64 `json:"critical_multiplier"`
+        BeerBonusPerBeer float64 `json:"beer_bonus_per_beer"`
+        TargetBeers      int     `json:"target_beers"`
+        PrestigeBeers    int     `json:"prestige_beers"`
+}
+
+type Game struct {
+        State  *GameState
+        Config *Config
+        rand   *rand.Rand
+}
+
+func NewGame(playerName string) *Game <span class="cov8" title="1">{
+        config := &amp;Config{
+                TreeMinHP:        2,
+                TreeMaxHP:        6,
+                WoodMin:          1,
+                WoodMax:          3,
+                CriticalChance:   0.1,
+                CriticalMultiplier: 2.5,
+                BeerBonusPerBeer: 0.015,
+                TargetBeers:      420,
+                PrestigeBeers:    1000,
+        }
+        
+        now := time.Now()
+        state := &amp;GameState{
+                PlayerName:     playerName,
+                Wood:           0,
+                Beer:           0,
+                PrestigePoints: 0,
+                AxeLevel:       1,
+                TreeHP:         5,
+                MaxTreeHP:      5,
+                Workers:        Workers{},
+                Upgrades:       Upgrades{},
+                Stats:          Stats{AchievementsUnlocked: []string{}},
+                StartTime:      now,
+                LastUpdate:     now,
+        }
+        
+        game := &amp;Game{
+                State:  state,
+                Config: config,
+                rand:   rand.New(rand.NewSource(time.Now().UnixNano())),
+        }
+        
+        game.respawnTree()
+        return game
+}</span>
+
+func (g *Game) ChopTree() (int, bool, error) <span class="cov8" title="1">{
+        if g.State.TreeHP &lt;= 0 </span><span class="cov0" title="0">{
+                return 0, false, fmt.Errorf("tree already destroyed")
+        }</span>
+        
+        <span class="cov8" title="1">g.State.Stats.TotalClicks++
+        
+        baseDamage := g.State.AxeLevel
+        prestigeBonus := 1.0 + float64(g.State.PrestigePoints)*0.02
+        damage := int(float64(baseDamage) * prestigeBonus)
+        
+        isCritical := g.rand.Float64() &lt; g.getCriticalChance()
+        if isCritical </span><span class="cov0" title="0">{
+                damage = int(float64(damage) * g.getCriticalMultiplier())
+                g.State.Stats.CriticalHits++
+        }</span>
+        
+        <span class="cov8" title="1">g.State.TreeHP -= damage
+        woodGained := 0
+        
+        if g.State.TreeHP &lt;= 0 </span><span class="cov8" title="1">{
+                woodGained = g.harvestTree()
+                g.respawnTree()
+        }</span>
+        
+        <span class="cov8" title="1">g.State.LastUpdate = time.Now()
+        return woodGained, isCritical, nil</span>
+}
+
+func (g *Game) harvestTree() int <span class="cov8" title="1">{
+        baseWood := g.Config.WoodMin + g.rand.Intn(g.Config.WoodMax-g.Config.WoodMin+1)
+        
+        beerBonus := 1.0 + float64(g.State.Beer)*g.Config.BeerBonusPerBeer
+        prestigeBonus := 1.0 + float64(g.State.PrestigePoints)*0.05
+        breweryBonus := 1.0 + float64(g.State.Upgrades.BreweryBonus)*0.5
+        
+        totalBonus := beerBonus * prestigeBonus * breweryBonus
+        woodGained := int(float64(baseWood) * totalBonus)
+        
+        g.State.Wood += woodGained
+        g.State.Stats.TotalTreesChopped++
+        g.State.Stats.TotalWoodGained += woodGained
+        
+        return woodGained
+}</span>
+
+func (g *Game) respawnTree() <span class="cov8" title="1">{
+        g.State.MaxTreeHP = g.Config.TreeMinHP + g.rand.Intn(g.Config.TreeMaxHP-g.Config.TreeMinHP+1)
+        g.State.TreeHP = g.State.MaxTreeHP
+}</span>
+
+func (g *Game) getCriticalChance() float64 <span class="cov8" title="1">{
+        base := g.Config.CriticalChance
+        goldenAxeBonus := float64(g.State.Upgrades.GoldenAxe) * 0.15
+        return base + goldenAxeBonus
+}</span>
+
+func (g *Game) getCriticalMultiplier() float64 <span class="cov8" title="1">{
+        base := g.Config.CriticalMultiplier
+        goldenAxeBonus := float64(g.State.Upgrades.GoldenAxe) * 1.0
+        return base + goldenAxeBonus
+}</span>
+
+func (g *Game) UpgradeAxe() error <span class="cov8" title="1">{
+        cost := g.getAxeUpgradeCost()
+        if g.State.Wood &lt; cost </span><span class="cov8" title="1">{
+                return fmt.Errorf("not enough wood: need %d, have %d", cost, g.State.Wood)
+        }</span>
+        
+        <span class="cov8" title="1">g.State.Wood -= cost
+        g.State.AxeLevel++
+        g.State.LastUpdate = time.Now()
+        
+        return nil</span>
+}
+
+func (g *Game) getAxeUpgradeCost() int <span class="cov8" title="1">{
+        return int(15 * math.Pow(1.3, float64(g.State.AxeLevel-1)))
+}</span>
+
+func (g *Game) BuyWorker(workerType string) error <span class="cov8" title="1">{
+        var cost int
+        var currentCount *int
+        
+        switch workerType </span>{
+        case "ptit_lu":<span class="cov8" title="1">
+                cost = g.getWorkerCost("ptit_lu", g.State.Workers.PtitLu)
+                currentCount = &amp;g.State.Workers.PtitLu</span>
+        case "mathieu":<span class="cov8" title="1">
+                cost = g.getWorkerCost("mathieu", g.State.Workers.Mathieu)
+                currentCount = &amp;g.State.Workers.Mathieu</span>
+        case "vico":<span class="cov8" title="1">
+                cost = g.getWorkerCost("vico", g.State.Workers.Vico)
+                currentCount = &amp;g.State.Workers.Vico</span>
+        default:<span class="cov8" title="1">
+                return fmt.Errorf("unknown worker type: %s", workerType)</span>
+        }
+        
+        <span class="cov8" title="1">if g.State.Wood &lt; cost </span><span class="cov0" title="0">{
+                return fmt.Errorf("not enough wood: need %d, have %d", cost, g.State.Wood)
+        }</span>
+        
+        <span class="cov8" title="1">g.State.Wood -= cost
+        *currentCount++
+        g.State.Stats.WorkersHired++
+        g.State.LastUpdate = time.Now()
+        
+        return nil</span>
+}
+
+func (g *Game) getWorkerCost(workerType string, currentCount int) int <span class="cov8" title="1">{
+        baseCosts := map[string]int{
+                "ptit_lu": 25,
+                "mathieu": 100,
+                "vico":    300,
+        }
+        
+        multipliers := map[string]float64{
+                "ptit_lu": 1.6,
+                "mathieu": 1.5,
+                "vico":    1.35,
+        }
+        
+        base := baseCosts[workerType]
+        multiplier := multipliers[workerType]
+        
+        return int(float64(base) * math.Pow(multiplier, float64(currentCount)))
+}</span>
+
+func (g *Game) BuyUpgrade(upgradeType string) error <span class="cov8" title="1">{
+        var cost int
+        var currentLevel *int
+        
+        switch upgradeType </span>{
+        case "auto_clicker":<span class="cov8" title="1">
+                cost = g.getUpgradeCost("auto_clicker", g.State.Upgrades.AutoClicker)
+                currentLevel = &amp;g.State.Upgrades.AutoClicker</span>
+        case "lumberjack_school":<span class="cov8" title="1">
+                cost = g.getUpgradeCost("lumberjack_school", g.State.Upgrades.LumberjackSchool)
+                currentLevel = &amp;g.State.Upgrades.LumberjackSchool</span>
+        case "brewery_bonus":<span class="cov8" title="1">
+                cost = g.getUpgradeCost("brewery_bonus", g.State.Upgrades.BreweryBonus)
+                currentLevel = &amp;g.State.Upgrades.BreweryBonus</span>
+        case "golden_axe":<span class="cov8" title="1">
+                cost = g.getUpgradeCost("golden_axe", g.State.Upgrades.GoldenAxe)
+                currentLevel = &amp;g.State.Upgrades.GoldenAxe</span>
+        default:<span class="cov0" title="0">
+                return fmt.Errorf("unknown upgrade type: %s", upgradeType)</span>
+        }
+        
+        <span class="cov8" title="1">if g.State.Wood &lt; cost </span><span class="cov0" title="0">{
+                return fmt.Errorf("not enough wood: need %d, have %d", cost, g.State.Wood)
+        }</span>
+        
+        <span class="cov8" title="1">g.State.Wood -= cost
+        *currentLevel++
+        g.State.LastUpdate = time.Now()
+        
+        return nil</span>
+}
+
+func (g *Game) getUpgradeCost(upgradeType string, currentLevel int) int <span class="cov8" title="1">{
+        baseCosts := map[string]int{
+                "auto_clicker":      75,
+                "lumberjack_school": 500,
+                "brewery_bonus":     200,
+                "golden_axe":        1000,
+        }
+        
+        multipliers := map[string]float64{
+                "auto_clicker":      1.4,
+                "lumberjack_school": 1.8,
+                "brewery_bonus":     2.0,
+                "golden_axe":        1.2,
+        }
+        
+        base := baseCosts[upgradeType]
+        multiplier := multipliers[upgradeType]
+        
+        return int(float64(base) * math.Pow(multiplier, float64(currentLevel)))
+}</span>
+
+func (g *Game) BuyBeer() error <span class="cov8" title="1">{
+        cost := g.getBeerCost()
+        if g.State.Wood &lt; cost </span><span class="cov0" title="0">{
+                return fmt.Errorf("not enough wood: need %d, have %d", cost, g.State.Wood)
+        }</span>
+        
+        <span class="cov8" title="1">g.State.Wood -= cost
+        g.State.Beer++
+        g.State.Stats.TotalBeersConsumed++
+        g.State.LastUpdate = time.Now()
+        
+        return nil</span>
+}
+
+func (g *Game) getBeerCost() int <span class="cov8" title="1">{
+        return int(4 * math.Pow(1.08, float64(g.State.Beer)))
+}</span>
+
+func (g *Game) CanPrestige() bool <span class="cov8" title="1">{
+        return g.State.Beer &gt;= g.Config.PrestigeBeers
+}</span>
+
+func (g *Game) Prestige() error <span class="cov8" title="1">{
+        if !g.CanPrestige() </span><span class="cov8" title="1">{
+                return fmt.Errorf("not enough beers for prestige: need %d, have %d", g.Config.PrestigeBeers, g.State.Beer)
+        }</span>
+        
+        <span class="cov8" title="1">prestigePointsGained := g.State.Beer / 100
+        g.State.PrestigePoints += prestigePointsGained
+        g.State.Stats.PrestigeCount++
+        
+        g.State.Wood = 0
+        g.State.Beer = 0
+        g.State.AxeLevel = 1
+        g.State.Workers = Workers{}
+        g.State.Upgrades = Upgrades{}
+        g.respawnTree()
+        g.State.LastUpdate = time.Now()
+        
+        return nil</span>
+}
+
+func (g *Game) IsGameWon() bool <span class="cov8" title="1">{
+        return g.State.Beer &gt;= g.Config.TargetBeers
+}</span>
+
+func (g *Game) ProcessWorkers() int <span class="cov8" title="1">{
+        if time.Since(g.State.LastUpdate) &lt; time.Second </span><span class="cov8" title="1">{
+                return 0
+        }</span>
+        
+        <span class="cov8" title="1">workerEfficiency := map[string]float64{
+                "ptit_lu": 0.8,
+                "mathieu": 2.5,
+                "vico":    8.0,
+        }
+        
+        schoolBonus := 1.0 + float64(g.State.Upgrades.LumberjackSchool)*0.25
+        prestigeBonus := 1.0 + float64(g.State.PrestigePoints)*0.02
+        
+        totalDamage := 0.0
+        totalDamage += float64(g.State.Workers.PtitLu) * workerEfficiency["ptit_lu"]
+        totalDamage += float64(g.State.Workers.Mathieu) * workerEfficiency["mathieu"]
+        totalDamage += float64(g.State.Workers.Vico) * workerEfficiency["vico"]
+        
+        totalDamage *= schoolBonus * prestigeBonus
+        
+        if g.State.Upgrades.AutoClicker &gt; 0 </span><span class="cov0" title="0">{
+                autoClickerDamage := float64(g.State.Upgrades.AutoClicker) * 0.5
+                totalDamage += autoClickerDamage
+        }</span>
+        
+        <span class="cov8" title="1">damage := int(totalDamage)
+        woodGained := 0
+        
+        if damage &gt; 0 </span><span class="cov8" title="1">{
+                g.State.TreeHP -= damage
+                if g.State.TreeHP &lt;= 0 </span><span class="cov0" title="0">{
+                        woodGained = g.harvestTree()
+                        g.respawnTree()
+                }</span>
+                <span class="cov8" title="1">g.State.LastUpdate = time.Now()</span>
+        }
+        
+        <span class="cov8" title="1">return woodGained</span>
+}
+
+func (g *Game) GetPrices() map[string]int <span class="cov8" title="1">{
+        return map[string]int{
+                "axe_upgrade":       g.getAxeUpgradeCost(),
+                "ptit_lu":          g.getWorkerCost("ptit_lu", g.State.Workers.PtitLu),
+                "mathieu":          g.getWorkerCost("mathieu", g.State.Workers.Mathieu),
+                "vico":             g.getWorkerCost("vico", g.State.Workers.Vico),
+                "beer":             g.getBeerCost(),
+                "auto_clicker":     g.getUpgradeCost("auto_clicker", g.State.Upgrades.AutoClicker),
+                "lumberjack_school": g.getUpgradeCost("lumberjack_school", g.State.Upgrades.LumberjackSchool),
+                "brewery_bonus":    g.getUpgradeCost("brewery_bonus", g.State.Upgrades.BreweryBonus),
+                "golden_axe":       g.getUpgradeCost("golden_axe", g.State.Upgrades.GoldenAxe),
+        }
+}</span>
+
+func (g *Game) GetGameDuration() time.Duration <span class="cov8" title="1">{
+        return time.Since(g.State.StartTime)
+}</pre>
+		
+		<pre class="file" id="file2" style="display: none">package web
+
+import (
+        "encoding/json"
+        "fmt"
+        "html/template"
+        "log"
+        "net/http"
+        "sync"
+        "time"
+        "valouniversaire/internal/game"
+)
+
+type Server struct {
+        games    map[string]*game.Game
+        gamesMux sync.RWMutex
+        tmpl     *template.Template
+}
+
+type APIResponse struct {
+        Success bool        `json:"success"`
+        Data    interface{} `json:"data,omitempty"`
+        Error   string      `json:"error,omitempty"`
+}
+
+type GameStateResponse struct {
+        *game.GameState
+        Prices        map[string]int `json:"prices"`
+        CanPrestige   bool           `json:"can_prestige"`
+        IsGameWon     bool           `json:"is_game_won"`
+        GameDuration  string         `json:"game_duration"`
+}
+
+type ActionRequest struct {
+        PlayerName string `json:"player_name"`
+        Action     string `json:"action"`
+        Target     string `json:"target,omitempty"`
+}
+
+func NewServer() *Server <span class="cov8" title="1">{
+        tmpl, err := template.ParseGlob("templates/*.html")
+        if err != nil </span><span class="cov8" title="1">{
+                log.Printf("Template parsing error: %v", err)
+        }</span>
+        
+        <span class="cov8" title="1">return &amp;Server{
+                games: make(map[string]*game.Game),
+                tmpl:  tmpl,
+        }</span>
+}
+
+func (s *Server) getOrCreateGame(playerName string) *game.Game <span class="cov8" title="1">{
+        s.gamesMux.Lock()
+        defer s.gamesMux.Unlock()
+        
+        if g, exists := s.games[playerName]; exists </span><span class="cov8" title="1">{
+                return g
+        }</span>
+        
+        <span class="cov8" title="1">g := game.NewGame(playerName)
+        s.games[playerName] = g
+        return g</span>
+}
+
+func (s *Server) HomeHandler(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        if s.tmpl == nil </span><span class="cov8" title="1">{
+                w.Header().Set("Content-Type", "text/html")
+                w.WriteHeader(http.StatusOK)
+                w.Write([]byte("&lt;html&gt;&lt;body&gt;&lt;h1&gt;Valouniversaire Game&lt;/h1&gt;&lt;p&gt;Template not available in test mode&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;"))
+                return
+        }</span>
+        
+        <span class="cov0" title="0">err := s.tmpl.ExecuteTemplate(w, "index.html", nil)
+        if err != nil </span><span class="cov0" title="0">{
+                http.Error(w, err.Error(), http.StatusInternalServerError)
+        }</span>
+}
+
+func (s *Server) GameStateHandler(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        if r.Method != http.MethodGet </span><span class="cov8" title="1">{
+                s.sendError(w, "Method not allowed", http.StatusMethodNotAllowed)
+                return
+        }</span>
+        
+        <span class="cov8" title="1">playerName := r.URL.Query().Get("player_name")
+        if playerName == "" </span><span class="cov8" title="1">{
+                s.sendError(w, "Player name is required", http.StatusBadRequest)
+                return
+        }</span>
+        
+        <span class="cov8" title="1">g := s.getOrCreateGame(playerName)
+        
+        g.ProcessWorkers()
+        
+        response := GameStateResponse{
+                GameState:    g.State,
+                Prices:       g.GetPrices(),
+                CanPrestige:  g.CanPrestige(),
+                IsGameWon:    g.IsGameWon(),
+                GameDuration: formatDuration(g.GetGameDuration()),
+        }
+        
+        s.sendSuccess(w, response)</span>
+}
+
+func (s *Server) ActionHandler(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        if r.Method != http.MethodPost </span><span class="cov8" title="1">{
+                s.sendError(w, "Method not allowed", http.StatusMethodNotAllowed)
+                return
+        }</span>
+        
+        <span class="cov8" title="1">var req ActionRequest
+        if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil </span><span class="cov8" title="1">{
+                s.sendError(w, "Invalid JSON", http.StatusBadRequest)
+                return
+        }</span>
+        
+        <span class="cov8" title="1">if req.PlayerName == "" </span><span class="cov8" title="1">{
+                s.sendError(w, "Player name is required", http.StatusBadRequest)
+                return
+        }</span>
+        
+        <span class="cov8" title="1">g := s.getOrCreateGame(req.PlayerName)
+        
+        var result interface{}
+        var err error
+        
+        switch req.Action </span>{
+        case "chop":<span class="cov8" title="1">
+                var woodGained int
+                var isCritical bool
+                woodGained, isCritical, err = g.ChopTree()
+                result = map[string]interface{}{
+                        "wood_gained": woodGained,
+                        "is_critical": isCritical,
+                }</span>
+                
+        case "upgrade_axe":<span class="cov8" title="1">
+                err = g.UpgradeAxe()
+                result = "Axe upgraded successfully"</span>
+                
+        case "buy_worker":<span class="cov8" title="1">
+                if req.Target == "" </span><span class="cov0" title="0">{
+                        s.sendError(w, "Worker type is required", http.StatusBadRequest)
+                        return
+                }</span>
+                <span class="cov8" title="1">err = g.BuyWorker(req.Target)
+                result = fmt.Sprintf("Worker %s hired successfully", req.Target)</span>
+                
+        case "buy_upgrade":<span class="cov8" title="1">
+                if req.Target == "" </span><span class="cov0" title="0">{
+                        s.sendError(w, "Upgrade type is required", http.StatusBadRequest)
+                        return
+                }</span>
+                <span class="cov8" title="1">err = g.BuyUpgrade(req.Target)
+                result = fmt.Sprintf("Upgrade %s purchased successfully", req.Target)</span>
+                
+        case "buy_beer":<span class="cov8" title="1">
+                err = g.BuyBeer()
+                result = "Beer purchased successfully"</span>
+                
+        case "prestige":<span class="cov8" title="1">
+                err = g.Prestige()
+                result = "Prestige activated successfully"</span>
+                
+        default:<span class="cov8" title="1">
+                s.sendError(w, "Unknown action: "+req.Action, http.StatusBadRequest)
+                return</span>
+        }
+        
+        <span class="cov8" title="1">if err != nil </span><span class="cov0" title="0">{
+                s.sendError(w, err.Error(), http.StatusBadRequest)
+                return
+        }</span>
+        
+        <span class="cov8" title="1">response := GameStateResponse{
+                GameState:    g.State,
+                Prices:       g.GetPrices(),
+                CanPrestige:  g.CanPrestige(),
+                IsGameWon:    g.IsGameWon(),
+                GameDuration: formatDuration(g.GetGameDuration()),
+        }
+        
+        s.sendSuccess(w, map[string]interface{}{
+                "action_result": result,
+                "game_state":    response,
+        })</span>
+}
+
+func (s *Server) ScoresHandler(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        if r.Method != http.MethodGet </span><span class="cov0" title="0">{
+                s.sendError(w, "Method not allowed", http.StatusMethodNotAllowed)
+                return
+        }</span>
+        
+        <span class="cov8" title="1">s.gamesMux.RLock()
+        defer s.gamesMux.RUnlock()
+        
+        type ScoreEntry struct {
+                PlayerName     string        `json:"player_name"`
+                Beer           int           `json:"beer"`
+                PrestigePoints int           `json:"prestige_points"`
+                GameDuration   string        `json:"game_duration"`
+                IsGameWon      bool          `json:"is_game_won"`
+                TotalWood      int           `json:"total_wood"`
+                TotalClicks    int           `json:"total_clicks"`
+        }
+        
+        var scores []ScoreEntry
+        for _, g := range s.games </span><span class="cov8" title="1">{
+                scores = append(scores, ScoreEntry{
+                        PlayerName:     g.State.PlayerName,
+                        Beer:           g.State.Beer,
+                        PrestigePoints: g.State.PrestigePoints,
+                        GameDuration:   formatDuration(g.GetGameDuration()),
+                        IsGameWon:      g.IsGameWon(),
+                        TotalWood:      g.State.Stats.TotalWoodGained,
+                        TotalClicks:    g.State.Stats.TotalClicks,
+                })
+        }</span>
+        
+        <span class="cov8" title="1">s.sendSuccess(w, scores)</span>
+}
+
+func (s *Server) ResetGameHandler(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        if r.Method != http.MethodPost </span><span class="cov8" title="1">{
+                s.sendError(w, "Method not allowed", http.StatusMethodNotAllowed)
+                return
+        }</span>
+        
+        <span class="cov8" title="1">playerName := r.URL.Query().Get("player_name")
+        if playerName == "" </span><span class="cov8" title="1">{
+                s.sendError(w, "Player name is required", http.StatusBadRequest)
+                return
+        }</span>
+        
+        <span class="cov8" title="1">s.gamesMux.Lock()
+        delete(s.games, playerName)
+        s.gamesMux.Unlock()
+        
+        g := s.getOrCreateGame(playerName)
+        
+        response := GameStateResponse{
+                GameState:    g.State,
+                Prices:       g.GetPrices(),
+                CanPrestige:  g.CanPrestige(),
+                IsGameWon:    g.IsGameWon(),
+                GameDuration: formatDuration(g.GetGameDuration()),
+        }
+        
+        s.sendSuccess(w, response)</span>
+}
+
+func (s *Server) HealthHandler(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        s.sendSuccess(w, map[string]interface{}{
+                "status":      "ok",
+                "timestamp":   time.Now(),
+                "active_games": len(s.games),
+        })
+}</span>
+
+func (s *Server) sendSuccess(w http.ResponseWriter, data interface{}) <span class="cov8" title="1">{
+        w.Header().Set("Content-Type", "application/json")
+        w.Header().Set("Access-Control-Allow-Origin", "*")
+        w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+        
+        response := APIResponse{
+                Success: true,
+                Data:    data,
+        }
+        
+        json.NewEncoder(w).Encode(response)
+}</span>
+
+func (s *Server) sendError(w http.ResponseWriter, message string, statusCode int) <span class="cov8" title="1">{
+        w.Header().Set("Content-Type", "application/json")
+        w.Header().Set("Access-Control-Allow-Origin", "*")
+        w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+        w.WriteHeader(statusCode)
+        
+        response := APIResponse{
+                Success: false,
+                Error:   message,
+        }
+        
+        json.NewEncoder(w).Encode(response)
+}</span>
+
+func (s *Server) CORSHandler(next http.Handler) http.Handler <span class="cov8" title="1">{
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) </span><span class="cov8" title="1">{
+                w.Header().Set("Access-Control-Allow-Origin", "*")
+                w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+                w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+                
+                if r.Method == http.MethodOptions </span><span class="cov8" title="1">{
+                        w.WriteHeader(http.StatusOK)
+                        return
+                }</span>
+                
+                <span class="cov8" title="1">next.ServeHTTP(w, r)</span>
+        })
+}
+
+func formatDuration(d time.Duration) string <span class="cov8" title="1">{
+        hours := int(d.Hours())
+        minutes := int(d.Minutes()) % 60
+        seconds := int(d.Seconds()) % 60
+        
+        if hours &gt; 0 </span><span class="cov8" title="1">{
+                return fmt.Sprintf("%dh %dm %ds", hours, minutes, seconds)
+        }</span> else<span class="cov8" title="1"> if minutes &gt; 0 </span><span class="cov8" title="1">{
+                return fmt.Sprintf("%dm %ds", minutes, seconds)
+        }</span> else<span class="cov8" title="1"> {
+                return fmt.Sprintf("%ds", seconds)
+        }</span>
+}
+
+func (s *Server) SetupRoutes() *http.ServeMux <span class="cov8" title="1">{
+        mux := http.NewServeMux()
+        
+        mux.Handle("/", s.CORSHandler(http.HandlerFunc(s.HomeHandler)))
+        mux.Handle("/api/state", s.CORSHandler(http.HandlerFunc(s.GameStateHandler)))
+        mux.Handle("/api/action", s.CORSHandler(http.HandlerFunc(s.ActionHandler)))
+        mux.Handle("/api/scores", s.CORSHandler(http.HandlerFunc(s.ScoresHandler)))
+        mux.Handle("/api/reset", s.CORSHandler(http.HandlerFunc(s.ResetGameHandler)))
+        mux.Handle("/api/health", s.CORSHandler(http.HandlerFunc(s.HealthHandler)))
+        
+        mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
+        
+        return mux
+}</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
