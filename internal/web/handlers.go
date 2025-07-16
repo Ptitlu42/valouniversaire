@@ -317,10 +317,38 @@ func formatDuration(d time.Duration) string {
 	}
 }
 
+func (s *Server) DebugHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	tmpl, err := template.ParseFiles("templates/debug.html")
+	if err != nil {
+		log.Printf("Debug template error: %v", err)
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	
+	data := map[string]interface{}{
+		"Title": "Valouniversaire - Debug Mode",
+		"ServerTime": time.Now().Format("2006-01-02 15:04:05"),
+		"ActiveGames": len(s.games),
+	}
+	
+	if err := tmpl.Execute(w, data); err != nil {
+		log.Printf("Debug template execution error: %v", err)
+		http.Error(w, "Template execution error", http.StatusInternalServerError)
+	}
+}
+
 func (s *Server) SetupRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
 	
 	mux.Handle("/", s.CORSHandler(http.HandlerFunc(s.HomeHandler)))
+	mux.Handle("/debug", s.CORSHandler(http.HandlerFunc(s.DebugHandler)))
 	mux.Handle("/api/state", s.CORSHandler(http.HandlerFunc(s.GameStateHandler)))
 	mux.Handle("/api/action", s.CORSHandler(http.HandlerFunc(s.ActionHandler)))
 	mux.Handle("/api/scores", s.CORSHandler(http.HandlerFunc(s.ScoresHandler)))
