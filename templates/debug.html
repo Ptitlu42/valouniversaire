@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Valouniversaire - Debug Mode</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f0f0f0; }
+        .loading { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .game-container { display: none; }
+        .game-area { display: none; margin-top: 20px; }
+        .header { background: #2c3e50; color: white; padding: 20px; text-align: center; border-radius: 10px; }
+        .player-info { margin-top: 10px; }
+        .player-info input { padding: 10px; margin: 5px; border: none; border-radius: 5px; }
+        .btn { padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .btn:hover { background: #2980b9; }
+        .stats-bar { display: flex; justify-content: space-around; background: white; padding: 15px; border-radius: 10px; margin: 20px 0; }
+        .stat { text-align: center; }
+        .stat-value { font-weight: bold; color: #2c3e50; }
+        .tree-section { text-align: center; margin: 20px 0; }
+        .tree-button { font-size: 100px; background: none; border: none; cursor: pointer; }
+        .tree-button:hover { transform: scale(1.1); }
+        .debug-info { background: #333; color: #0f0; padding: 20px; border-radius: 10px; margin: 20px 0; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div id="loading" class="loading">
+        <div class="loader"></div>
+        <p>Chargement du jeu...</p>
+        <div class="debug-info">
+            <h3>🔧 Mode Debug Activé</h3>
+            <p>Vérifiez la console du navigateur (F12) pour les logs détaillés</p>
+        </div>
+    </div>
+
+    <div id="game-container" class="game-container">
+        <header class="header">
+            <h1>🌳 Valouniversaire - Debug Mode</h1>
+            <div class="player-info">
+                <input type="text" id="player-name" placeholder="Votre nom" maxlength="20">
+                <button id="start-game" class="btn">Commencer</button>
+            </div>
+        </header>
+
+        <div id="game-area" class="game-area">
+            <div class="stats-bar">
+                <div class="stat">
+                    <span>🪵</span>
+                    <div>Bois: <span id="wood-count">0</span></div>
+                </div>
+                <div class="stat">
+                    <span>🍺</span>
+                    <div>Bières: <span id="beer-count">0</span></div>
+                </div>
+                <div class="stat">
+                    <span>⭐</span>
+                    <div>Prestige: <span id="prestige-count">0</span></div>
+                </div>
+                <div class="stat">
+                    <span>⏱️</span>
+                    <div>Temps: <span id="game-duration">0s</span></div>
+                </div>
+            </div>
+
+            <div class="tree-section">
+                <button id="tree-button" class="tree-button">🌳</button>
+                <div>Cliquez sur l'arbre !</div>
+                
+                <!-- Éléments cachés pour éviter les erreurs -->
+                <div style="display: none;">
+                    <div id="tree-hp-fill"></div>
+                    <div id="tree-hp-text"></div>
+                    <div id="axe-level"></div>
+                    <div id="upgrade-axe"></div>
+                    <div id="axe-cost"></div>
+                    <div id="wood-gained"></div>
+                    <div id="critical-hit"></div>
+                    <div id="buy-beer"></div>
+                    <div id="beer-cost"></div>
+                    <div id="prestige-section"></div>
+                    <div id="prestige-button"></div>
+                    <div id="victory-screen"></div>
+                    <div id="continue-playing"></div>
+                    <div id="reset-game"></div>
+                    <div id="notification-container"></div>
+                </div>
+            </div>
+
+            <div class="debug-info">
+                <h3>🔍 Informations de Debug</h3>
+                <p>Status du serveur: <button onclick="window.game.testAPIConnection()">Tester API</button></p>
+                <p>État du jeu: <span id="debug-state">Non chargé</span></p>
+                <p>Joueur: <span id="debug-player">Aucun</span></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/game-debug.js"></script>
+    
+    <script>
+        // Script de debug supplémentaire
+        console.log('🎮 Template debug chargé');
+        
+        // Mise à jour des infos de debug
+        setInterval(() => {
+            if (window.game) {
+                const debugState = document.getElementById('debug-state');
+                const debugPlayer = document.getElementById('debug-player');
+                
+                if (debugState) {
+                    debugState.textContent = window.game.gameState ? 'Chargé' : 'Non chargé';
+                }
+                
+                if (debugPlayer) {
+                    debugPlayer.textContent = window.game.playerName || 'Aucun';
+                }
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

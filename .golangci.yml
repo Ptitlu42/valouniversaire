@@ -1,0 +1,96 @@
+run:
+  timeout: 5m
+  go: '1.24.2'
+  build-tags:
+    - integration
+
+linters:
+  enable:
+    # Enabled by default
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    
+    # Additional recommended linters
+    - gofmt
+    - goimports
+    - goconst
+    - gocritic
+    - gocyclo
+    - gofumpt
+    - gosec
+    - misspell
+    - prealloc
+    - unconvert
+    - unparam
+    - whitespace
+    - bodyclose
+    - exportloopref
+    - revive
+    - stylecheck
+    - typecheck
+    
+  disable:
+    - exhaustivestruct # Too strict for this project
+    - gochecknoglobals # We have some necessary globals
+    - gochecknoinits   # We use init functions
+    - paralleltest     # Not all tests need to be parallel
+
+linters-settings:
+  gocyclo:
+    min-complexity: 15
+    
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+    
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - whyNoLint
+      - hugeParam
+      
+  gofumpt:
+    lang-version: "1.24"
+    
+  gosec:
+    excludes:
+      - G404 # Random number generator not cryptographically secure (game logic)
+      
+  revive:
+    rules:
+      - name: var-naming
+        disabled: true # Too strict for some game variables
+        
+  staticcheck:
+    go: "1.24"
+
+issues:
+  exclude-rules:
+    # Exclude test files from some linters
+    - path: _test\.go
+      linters:
+        - gosec
+        - dupl
+        - unparam
+        
+    # Exclude main.go from some linters
+    - path: cmd/server/main\.go
+      linters:
+        - gocyclo
+        
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
