@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Valouniversaire - Tree Clicker Game</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div id="loading" class="loading">
+        <div class="loader"></div>
+        <p>Chargement du jeu...</p>
+    </div>
+
+    <div id="game-container" class="game-container" style="display: none;">
+        <header class="header">
+            <h1>🌳 Valouniversaire</h1>
+            <div class="player-info">
+                <input type="text" id="player-name" placeholder="Votre nom" maxlength="20">
+                <button id="start-game" class="btn btn-primary">Commencer</button>
+            </div>
+        </header>
+
+        <div id="game-area" class="game-area" style="display: none;">
+            <div class="stats-bar">
+                <div class="stat">
+                    <span class="stat-icon">🪵</span>
+                    <span class="stat-label">Bois:</span>
+                    <span id="wood-count" class="stat-value">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-icon">🍺</span>
+                    <span class="stat-label">Bières:</span>
+                    <span id="beer-count" class="stat-value">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-icon">⭐</span>
+                    <span class="stat-label">Prestige:</span>
+                    <span id="prestige-count" class="stat-value">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-icon">⏱️</span>
+                    <span class="stat-label">Temps:</span>
+                    <span id="game-duration" class="stat-value">0s</span>
+                </div>
+            </div>
+
+            <div class="main-content">
+                <div class="tree-section">
+                    <div class="tree-container">
+                        <div class="tree-info">
+                            <div class="tree-hp-bar">
+                                <div id="tree-hp-fill" class="tree-hp-fill"></div>
+                                <span id="tree-hp-text" class="tree-hp-text">5/5</span>
+                            </div>
+                        </div>
+                        <button id="tree-button" class="tree-button">
+                            <span class="tree-emoji">🌳</span>
+                        </button>
+                        <div class="axe-info">
+                            <span class="axe-icon">🪓</span>
+                            <span>Niveau <span id="axe-level">1</span></span>
+                            <button id="upgrade-axe" class="btn btn-small">
+                                Améliorer (<span id="axe-cost">15</span> 🪵)
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="action-feedback">
+                        <div id="wood-gained" class="wood-gained"></div>
+                        <div id="critical-hit" class="critical-hit"></div>
+                    </div>
+                </div>
+
+                <div class="shop-section">
+                    <div class="shop-category">
+                        <h3>🍺 Brasserie</h3>
+                        <button id="buy-beer" class="shop-item">
+                            <span class="item-name">Acheter Bière</span>
+                            <span class="item-cost"><span id="beer-cost">4</span> 🪵</span>
+                        </button>
+                    </div>
+
+                    <div class="shop-category">
+                        <h3>👷 Ouvriers</h3>
+                        <button id="buy-ptit-lu" class="shop-item">
+                            <span class="item-name">P'tit Lu (<span id="ptit-lu-count">0</span>)</span>
+                            <span class="item-cost"><span id="ptit-lu-cost">25</span> 🪵</span>
+                        </button>
+                        <button id="buy-mathieu" class="shop-item">
+                            <span class="item-name">Mathieu (<span id="mathieu-count">0</span>)</span>
+                            <span class="item-cost"><span id="mathieu-cost">100</span> 🪵</span>
+                        </button>
+                        <button id="buy-vico" class="shop-item">
+                            <span class="item-name">Vico (<span id="vico-count">0</span>)</span>
+                            <span class="item-cost"><span id="vico-cost">300</span> 🪵</span>
+                        </button>
+                    </div>
+
+                    <div class="shop-category">
+                        <h3>⚡ Améliorations</h3>
+                        <button id="buy-auto-clicker" class="shop-item">
+                            <span class="item-name">Auto-Clicker (<span id="auto-clicker-count">0</span>)</span>
+                            <span class="item-cost"><span id="auto-clicker-cost">75</span> 🪵</span>
+                        </button>
+                        <button id="buy-lumberjack-school" class="shop-item">
+                            <span class="item-name">École Bûcheron (<span id="lumberjack-school-count">0</span>)</span>
+                            <span class="item-cost"><span id="lumberjack-school-cost">500</span> 🪵</span>
+                        </button>
+                        <button id="buy-brewery-bonus" class="shop-item">
+                            <span class="item-name">Bonus Brasserie (<span id="brewery-bonus-count">0</span>)</span>
+                            <span class="item-cost"><span id="brewery-bonus-cost">200</span> 🪵</span>
+                        </button>
+                        <button id="buy-golden-axe" class="shop-item">
+                            <span class="item-name">Hache Dorée (<span id="golden-axe-count">0</span>)</span>
+                            <span class="item-cost"><span id="golden-axe-cost">1000</span> 🪵</span>
+                        </button>
+                    </div>
+
+                    <div class="shop-category prestige-section" id="prestige-section" style="display: none;">
+                        <h3>🌟 Prestige</h3>
+                        <p>Recommencer avec des bonus permanents!</p>
+                        <button id="prestige-button" class="btn btn-prestige">
+                            Prestige (1000+ 🍺)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-section">
+                <h3>📊 Statistiques</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-name">Arbres coupés:</span>
+                        <span id="trees-chopped" class="stat-number">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-name">Bois total:</span>
+                        <span id="total-wood" class="stat-number">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-name">Bières consommées:</span>
+                        <span id="total-beers" class="stat-number">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-name">Clics totaux:</span>
+                        <span id="total-clicks" class="stat-number">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-name">Coups critiques:</span>
+                        <span id="critical-hits" class="stat-number">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-name">Ouvriers embauchés:</span>
+                        <span id="workers-hired" class="stat-number">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="victory-screen" class="victory-screen" style="display: none;">
+            <div class="victory-content">
+                <h2>🎉 Victoire!</h2>
+                <p>Félicitations! Vous avez atteint 420 bières!</p>
+                <button id="continue-playing" class="btn btn-primary">Continuer à jouer</button>
+                <button id="reset-game" class="btn btn-secondary">Recommencer</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification-container" class="notification-container"></div>
+
+    <script src="/static/game.js"></script>
+</body>
+</html>
